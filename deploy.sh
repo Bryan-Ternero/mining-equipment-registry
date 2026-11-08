@@ -185,9 +185,17 @@ step "5/7 Database migrations"
 
 DB_VARS="$(railway variable list --service "$DB_SERVICE" "${RAILWAY_SCOPE[@]}" --json 2>/dev/null)" ||
   fail "Could not read the variables of the '$DB_SERVICE' service in Railway." 6
-DB_URL="$(json_field "$DB_VARS" DATABASE_PUBLIC_URL)"
+# the public URL goes through Railway's TCP proxy; older templates only expose its parts
+DB_URL="$(node -e '
+const v = JSON.parse(process.argv[1]);
+if (v.DATABASE_PUBLIC_URL) process.stdout.write(v.DATABASE_PUBLIC_URL);
+else if (v.RAILWAY_TCP_PROXY_DOMAIN && v.RAILWAY_TCP_PROXY_PORT && v.PGUSER && v.PGPASSWORD && v.PGDATABASE) {
+  const auth = `${encodeURIComponent(v.PGUSER)}:${encodeURIComponent(v.PGPASSWORD)}`;
+  process.stdout.write(`postgresql://${auth}@${v.RAILWAY_TCP_PROXY_DOMAIN}:${v.RAILWAY_TCP_PROXY_PORT}/${v.PGDATABASE}`);
+}
+' "$DB_VARS" 2>/dev/null || true)"
 [ -n "$DB_URL" ] ||
-  fail "The '$DB_SERVICE' service has no DATABASE_PUBLIC_URL. Enable its public TCP proxy:
+  fail "The '$DB_SERVICE' service has no public database URL. Enable its public TCP proxy:
        railway tcp-proxy create --port 5432 --service $DB_SERVICE" 6
 
 (cd apps/api && DATABASE_URL="$DB_URL" npx prisma migrate deploy) ||
