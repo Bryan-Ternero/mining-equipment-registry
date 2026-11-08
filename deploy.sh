@@ -4,6 +4,7 @@
 #
 #   ./deploy.sh                deploy the current commit
 #   ./deploy.sh --allow-dirty  deploy uncommitted changes (/health still reports the HEAD commit)
+#   ./deploy.sh --allow-downgrade  deploy a commit that does not contain what production runs
 #   ./deploy.sh --help         show this help
 #
 # Steps: preflight -> auth -> current state -> local build -> migrations -> publish -> verify.
@@ -12,7 +13,8 @@
 #   0  deployed and verified
 #   2  preflight: missing tool, variable or invalid argument
 #   3  Railway, Vercel or GitHub not reachable / not authenticated
-#   4  uncommitted changes in what gets published, or the commit is not pushed to GitHub
+#   4  uncommitted changes in what gets published, the commit is not pushed to GitHub, or it
+#      would take production back to an older version
 #   5  local build failed (nothing was published)
 #   6  database migrations failed (nothing was published)
 #   7  API publish failed (production keeps the previous API)
@@ -31,11 +33,13 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT"
 
 ALLOW_DIRTY=0
+ALLOW_DOWNGRADE=0
 for arg in "$@"; do
   case "$arg" in
     --allow-dirty) ALLOW_DIRTY=1 ;;
+    --allow-downgrade) ALLOW_DOWNGRADE=1 ;;
     -h | --help)
-      sed -n '2,27p' "$0" | sed 's/^# \{0,1\}//'
+      sed -n '2,29p' "$0" | sed 's/^# \{0,1\}//'
       exit 0
       ;;
     *)
@@ -190,6 +194,19 @@ if [ -n "$PREV_WEB_DEPLOYMENT" ]; then
   ok "web in production: $PREV_WEB_DEPLOYMENT (rollback target)"
 else
   warn "no current frontend deployment found: no frontend rollback available (first deploy?)"
+fi
+
+# never take production backwards by accident: migrations are forward-only, so publishing code
+# older than what is live leaves the database ahead of the code (for example, data of a type the
+# old frontend cannot draw). Same commit and descendants pass; the rollback uses its own path.
+if [ -n "$PREV_API_VERSION" ] && ! git merge-base --is-ancestor "$PREV_API_VERSION" HEAD; then
+  if [ "$ALLOW_DOWNGRADE" -eq 0 ]; then
+    fail "Production runs $PREV_API_VERSION, which is not part of the history of $VERSION:
+       publishing it would take production back while its database keeps the newer migrations.
+       Update your branch (git switch main && git pull), or, if going back is intended,
+       run ./deploy.sh --allow-downgrade." 4
+  fi
+  warn "downgrade on purpose: production runs $PREV_API_VERSION, publishing $VERSION (--allow-downgrade)"
 fi
 
 # ---------------------------------------------------------------------------
