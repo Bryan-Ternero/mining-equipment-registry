@@ -1,3 +1,7 @@
+/**
+ * Main screen: loads the type catalogue and the equipment, shows the summary cards, filters and search,
+ * and opens the dialogs. After each change it updates that row in place instead of reloading the list.
+ */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api, ApiError, type Equipment, type EquipmentType } from '../api';
 import { can, type Role } from '../auth/permissions';
@@ -57,6 +61,7 @@ export function FleetView({ role, onDueCountChange }: FleetViewProps) {
   const dueCount = useMemo(() => equipment?.filter((e) => e.requiresMaintenance).length ?? 0, [equipment]);
   useEffect(() => onDueCountChange(dueCount), [dueCount, onDueCountChange]);
 
+  // tab filter (all / due / operating) combined with the search box (code or type name)
   const visible = useMemo(() => {
     const text = query.trim().toUpperCase();
     return (equipment ?? []).filter(
@@ -68,6 +73,7 @@ export function FleetView({ role, onDueCountChange }: FleetViewProps) {
 
   // a save that finishes late only closes its own dialog, never one opened afterwards
   const closeIf = (opened: Dialog) => setDialog((current) => (current === opened ? null : current));
+  // the API answers every write with the updated equipment: replace that row, keep the list sorted
   const upsert = (row: Equipment) =>
     setEquipment((rows) => [...(rows ?? []).filter((r) => r.id !== row.id), row].sort(byCode));
 

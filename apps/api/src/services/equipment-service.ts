@@ -1,3 +1,7 @@
+/**
+ * Equipment and maintenance use cases on top of Prisma: maps rows to the API shape, adds the derived
+ * maintenance status and turns database errors (duplicates, missing rows) into API errors.
+ */
 import { Prisma, type PrismaClient } from '@prisma/client';
 import { maintenanceStatus } from '../domain/maintenance.js';
 import { AppError, conflict, invalid, notFound } from '../errors.js';
@@ -64,21 +68,25 @@ async function lockEquipment(tx: Prisma.TransactionClient, id: string) {
 export class EquipmentService {
   constructor(private readonly db: PrismaClient) {}
 
+  /** the type catalogue (code, name, interval), ordered by code */
   listTypes() {
     return this.db.equipmentType.findMany({ orderBy: { code: 'asc' } });
   }
 
+  /** every equipment with its derived maintenance status, ordered by code */
   async list(): Promise<EquipmentDto[]> {
     const rows = await this.db.equipment.findMany({ include: withType, orderBy: { code: 'asc' } });
     return rows.map(toEquipmentDto);
   }
 
+  /** one equipment, or 404 */
   async get(id: string): Promise<EquipmentDto> {
     const row = await this.db.equipment.findUnique({ where: { id }, include: withType });
     if (!row) throw notFound('No existe el equipo solicitado.');
     return toEquipmentDto(row);
   }
 
+  /** creates an equipment; its cycle starts at 0 h, so it may already be due. A duplicate code is a 409 */
   async create(input: CreateEquipmentInput): Promise<EquipmentDto> {
     try {
       const row = await this.db.equipment.create({
@@ -91,6 +99,10 @@ export class EquipmentService {
     }
   }
 
+  /**
+   * Partial edit. The row is locked and re-read inside the transaction so the hourmeter check uses
+   * the latest last-service reading, even if a service is being registered at the same time.
+   */
   async update(id: string, input: UpdateEquipmentInput): Promise<EquipmentDto> {
     try {
       return await this.db.$transaction(async (tx) => {
@@ -119,6 +131,7 @@ export class EquipmentService {
     }
   }
 
+  /** deletes an equipment; its maintenance history goes with it (ON DELETE CASCADE) */
   async remove(id: string): Promise<void> {
     try {
       await this.db.equipment.delete({ where: { id } });
@@ -127,6 +140,7 @@ export class EquipmentService {
     }
   }
 
+  /** service history of one equipment, newest first; 404 if the equipment does not exist */
   async listMaintenances(id: string) {
     await this.get(id);
     const rows = await this.db.maintenanceRecord.findMany({

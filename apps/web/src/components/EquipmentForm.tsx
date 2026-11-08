@@ -1,3 +1,7 @@
+/**
+ * Create and edit dialog. It validates in the browser for instant feedback, shows the API errors next
+ * to each field, and for the operator locks code and type so only the hourmeter can change.
+ */
 import { useState, type FormEvent } from 'react';
 import { ApiError, type Equipment, type EquipmentInput, type EquipmentType } from '../api';
 import { can, type Role } from '../auth/permissions';

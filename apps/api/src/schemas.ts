@@ -1,3 +1,7 @@
+/**
+ * Request validation with zod. Messages are in Spanish because the frontend shows them as they come,
+ * and every invalid field is reported at once (400 with one entry per field).
+ */
 import { z } from 'zod';
 import { invalid } from './errors.js';
 

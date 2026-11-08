@@ -1,3 +1,7 @@
+/**
+ * Builds the Fastify application: CORS, the session guard, one error shape for every failure and the
+ * route plugins. server.ts makes it listen; the tests build it with an injected config and database.
+ */
 import cors from '@fastify/cors';
 import type { PrismaClient } from '@prisma/client';
 import Fastify, { type FastifyInstance } from 'fastify';

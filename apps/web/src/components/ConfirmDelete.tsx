@@ -1,3 +1,6 @@
+/**
+ * Confirmation before deleting an equipment: the history goes with it and it cannot be undone.
+ */
 import { useState } from 'react';
 import { ApiError, type Equipment } from '../api';
 import { Modal } from './Modal';

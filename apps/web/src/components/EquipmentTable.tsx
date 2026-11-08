@@ -1,3 +1,7 @@
+/**
+ * Equipment table: one row per equipment with its current cycle, its status and the actions the role
+ * allows. On phones the CSS turns each row into a card.
+ */
 import type { Equipment } from '../api';
 import { can, type Role } from '../auth/permissions';
 import { cycleProgress, formatHours } from '../format';
@@ -32,6 +36,7 @@ export function EquipmentTable({ equipment, role, onEdit, onMaintenance, onDelet
           {equipment.map((e) => {
             const progress = cycleProgress(e);
             const Icon = iconFor(e.typeCode);
+            // bar colour: red when due, amber from 80% of the interval (service coming up), green otherwise
             const level = e.requiresMaintenance ? 'due' : progress >= 80 ? 'warn' : '';
             return (
               <tr key={e.id}>

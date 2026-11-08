@@ -1,3 +1,6 @@
+/**
+ * Login and current-user routes. The login is the only /api route reachable without a session.
+ */
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { requireUser } from '../auth/guard.js';

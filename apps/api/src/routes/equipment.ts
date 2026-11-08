@@ -1,3 +1,6 @@
+/**
+ * Equipment REST routes: validate the input, check the role, delegate to EquipmentService.
+ */
 import type { FastifyPluginAsync } from 'fastify';
 import { requireRole, requireUser } from '../auth/guard.js';
 import {

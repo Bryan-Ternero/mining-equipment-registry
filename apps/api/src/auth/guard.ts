@@ -1,3 +1,6 @@
+/**
+ * Session helpers for route handlers: read the Bearer token and enforce the role a route requires.
+ */
 import type { FastifyRequest } from 'fastify';
 import { forbidden, unauthorized } from '../errors.js';
 import { verifyToken, type Role, type SessionUser } from './tokens.js';

@@ -1,3 +1,7 @@
+/**
+ * Runtime configuration from environment variables. It fails at startup listing every missing
+ * variable, so a misconfigured deploy never starts serving requests.
+ */
 import type { Role } from './auth/tokens.js';
 
 export interface Account {
