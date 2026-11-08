@@ -10,7 +10,7 @@ permissions:
 
 concurrency:
   group: ci-${{ github.ref }}
-  # never cancel runs on main, so every merged commit keeps its result
+  # nunca cancelar ejecuciones en main, así cada commit fusionado conserva su resultado
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
@@ -83,7 +83,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          # full history and branches: the downgrade check compares commits
+          # historial y ramas completos: la verificación de downgrade compara commits
           fetch-depth: 0
       - name: Syntax
         run: bash -n deploy.sh
@@ -105,7 +105,7 @@ jobs:
           test "$?" -eq 2
       - name: Refuses to deploy a commit that is not on GitHub (exit 4)
         run: |
-          # fake provider CLIs: they answer the read-only checks and refuse anything that publishes
+          # CLI falsas de los proveedores: responden las verificaciones de solo lectura y rechazan todo lo que publique
           mkdir -p "$RUNNER_TEMP/stubs"
           cat > "$RUNNER_TEMP/stubs/railway" <<'EOF'
           #!/usr/bin/env bash
@@ -134,14 +134,14 @@ jobs:
           grep -q "is not on GitHub yet" out.txt
       - name: Refuses to take production back to an older commit (exit 4)
         run: |
-          # production "runs" origin/main (fake /health); deploy its parent, which is pushed but older
+          # producción "corre" origin/main (/health falso); se despliega su padre, que está subido pero es más antiguo
           cat > "$RUNNER_TEMP/stubs/curl" <<'EOF'
           #!/usr/bin/env bash
           printf '{"status":"ok","db":"up","version":"%s"}' "$FAKE_PROD_VERSION"
           EOF
           chmod +x "$RUNNER_TEMP/stubs/curl"
           prod=$(git rev-parse --short origin/main)
-          # a separate worktree on the older commit, so the later steps keep this job's checkout
+          # un worktree aparte en el commit más antiguo, así los pasos siguientes conservan el checkout de este job
           git worktree add -q --detach "$RUNNER_TEMP/older" origin/main~1
           cp deploy.sh "$RUNNER_TEMP/older/deploy.sh"
           cd "$RUNNER_TEMP/older"

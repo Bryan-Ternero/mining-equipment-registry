@@ -1,7 +1,7 @@
 /**
- * Login attempt limiter per client address, in memory (one API instance).
- * An attempt is counted before the password is checked, so a burst of parallel requests
- * cannot slip extra guesses in. A successful login clears the address.
+ * Limitador de intentos de login por dirección del cliente, en memoria (una sola instancia de la API).
+ * Un intento se cuenta antes de verificar la contraseña, así una ráfaga de peticiones en paralelo
+ * no puede colar intentos adicionales. Un login exitoso libera la dirección.
  */
 export class LoginThrottle {
   private readonly attempts = new Map<string, { count: number; resetAt: number }>();
@@ -11,7 +11,7 @@ export class LoginThrottle {
     private readonly windowMs = 15 * 60_000,
   ) {}
 
-  /** registers one attempt; returns the seconds to wait when the address is blocked, else 0 */
+  /** registra un intento; devuelve los segundos de espera si la dirección está bloqueada, si no 0 */
   hit(key: string, now = Date.now()): number {
     const entry = this.attempts.get(key);
     if (!entry || now >= entry.resetAt) {
@@ -28,7 +28,7 @@ export class LoginThrottle {
     this.attempts.delete(key);
   }
 
-  /** keeps the map bounded: drop expired entries once it grows */
+  /** mantiene acotado el mapa: descarta las entradas vencidas cuando crece */
   private prune(now: number) {
     if (this.attempts.size < 1000) return;
     for (const [key, entry] of this.attempts) if (now >= entry.resetAt) this.attempts.delete(key);

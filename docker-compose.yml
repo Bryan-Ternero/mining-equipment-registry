@@ -1,10 +1,10 @@
-# Local environment.
+# Entorno local.
 #
-#   docker compose up -d db                  PostgreSQL only (development and integration tests)
-#   docker compose --profile full up --build full stack: db -> migrations -> API -> web
+#   docker compose up -d db                  solo PostgreSQL (desarrollo y tests de integración)
+#   docker compose --profile full up --build stack completo: db -> migraciones -> API -> web
 #
-# PostgreSQL is published on 5433 so it does not clash with a native PostgreSQL on 5432.
-# These images are for local use only: production builds on Railway (API) and Vercel (web).
+# PostgreSQL se publica en 5433 para no chocar con un PostgreSQL nativo en 5432.
+# Estas imágenes son solo para uso local: producción compila en Railway (API) y Vercel (web).
 services:
   db:
     image: postgres:18-alpine
@@ -22,7 +22,7 @@ services:
       timeout: 3s
       retries: 20
 
-  # applies pending migrations once and exits; the API waits for it to succeed
+  # aplica las migraciones pendientes una vez y termina; la API espera a que tenga éxito
   migrate:
     profiles: [full]
     build:
@@ -46,9 +46,9 @@ services:
       PORT: "3001"
       WEB_ORIGIN: http://localhost:8080
       APP_VERSION: docker
-      # login accounts come from .env (never from the repository); see README "Cuentas de login".
-      # Empty when missing, so "docker compose up db" still works: the API then refuses to
-      # start and its log lists the missing variables.
+      # las cuentas de login vienen de .env (nunca del repositorio); ver README "Cuentas de login".
+      # Vacías cuando faltan, así "docker compose up db" sigue funcionando: la API entonces se
+      # niega a arrancar y su log lista las variables faltantes.
       AUTH_TOKEN_SECRET: ${AUTH_TOKEN_SECRET:-}
       AUTH_SUPERVISOR_USERNAME: ${AUTH_SUPERVISOR_USERNAME:-}
       AUTH_SUPERVISOR_PASSWORD_HASH: ${AUTH_SUPERVISOR_PASSWORD_HASH:-}

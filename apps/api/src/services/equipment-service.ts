@@ -1,3 +1,8 @@
+/**
+ * Casos de uso de equipos y mantenimientos sobre Prisma: convierte las filas a la forma de la API,
+ * agrega el estado de mantenimiento derivado y transforma los errores de la base de datos
+ * (duplicados, filas inexistentes) en errores de la API.
+ */
 import { Prisma, type PrismaClient } from '@prisma/client';
 import { maintenanceStatus } from '../domain/maintenance.js';
 import { AppError, conflict, invalid, notFound } from '../errors.js';
@@ -7,7 +12,7 @@ const withType = { type: true } as const;
 type EquipmentRow = Prisma.EquipmentGetPayload<{ include: typeof withType }>;
 type MaintenanceRow = Prisma.MaintenanceRecordGetPayload<object>;
 
-/** API shape of an equipment: stored fields plus the derived maintenance status */
+/** forma de un equipo en la API: los campos guardados más el estado de mantenimiento derivado */
 export function toEquipmentDto(row: EquipmentRow) {
   const hourmeter = row.hourmeter.toNumber();
   const lastServiceHours = row.lastServiceHours.toNumber();
@@ -40,13 +45,13 @@ export function toMaintenanceDto(row: MaintenanceRow) {
 
 export type EquipmentDto = ReturnType<typeof toEquipmentDto>;
 
-/** translates database errors that are part of the contract into API errors */
+/** traduce a errores de la API los errores de la base de datos que forman parte del contrato */
 function mapDbError(error: unknown, code?: string): never {
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
     if (error.code === 'P2002') throw conflict(`Ya existe un equipo con el código ${code}.`);
     if (error.code === 'P2025') throw notFound('No existe el equipo solicitado.');
   }
-  // a CHECK violation here means the row changed between the read and the write
+  // una violación de CHECK aquí significa que la fila cambió entre la lectura y la escritura
   if (error instanceof Error && error.message.includes('equipment_cycle_not_negative')) {
     throw conflict('El equipo cambió mientras se editaba. Recargue e intente de nuevo.');
   }
@@ -54,8 +59,9 @@ function mapDbError(error: unknown, code?: string): never {
 }
 
 /**
- * Row lock for read-validate-write sequences: two concurrent services or edits of the same
- * equipment run one after the other, so the second one validates against the first one's result.
+ * Bloqueo de fila para secuencias de lectura, validación y escritura: dos mantenimientos o
+ * ediciones concurrentes del mismo equipo se ejecutan uno tras otro, así el segundo valida contra
+ * el resultado del primero.
  */
 async function lockEquipment(tx: Prisma.TransactionClient, id: string) {
   await tx.$queryRaw`SELECT 1 FROM "equipment" WHERE "id" = ${id}::uuid FOR UPDATE`;
@@ -64,21 +70,25 @@ async function lockEquipment(tx: Prisma.TransactionClient, id: string) {
 export class EquipmentService {
   constructor(private readonly db: PrismaClient) {}
 
+  /** el catálogo de tipos (código, nombre, intervalo), ordenado por código */
   listTypes() {
     return this.db.equipmentType.findMany({ orderBy: { code: 'asc' } });
   }
 
+  /** todos los equipos con su estado de mantenimiento derivado, ordenados por código */
   async list(): Promise<EquipmentDto[]> {
     const rows = await this.db.equipment.findMany({ include: withType, orderBy: { code: 'asc' } });
     return rows.map(toEquipmentDto);
   }
 
+  /** un equipo, o 404 */
   async get(id: string): Promise<EquipmentDto> {
     const row = await this.db.equipment.findUnique({ where: { id }, include: withType });
     if (!row) throw notFound('No existe el equipo solicitado.');
     return toEquipmentDto(row);
   }
 
+  /** crea un equipo; su ciclo empieza en 0 h, así que puede requerir mantenimiento desde el inicio. Un código duplicado es un 409 */
   async create(input: CreateEquipmentInput): Promise<EquipmentDto> {
     try {
       const row = await this.db.equipment.create({
@@ -91,6 +101,11 @@ export class EquipmentService {
     }
   }
 
+  /**
+   * Edición parcial. La fila se bloquea y se vuelve a leer dentro de la transacción para que la
+   * validación del horómetro use la lectura más reciente del último mantenimiento, aunque se esté
+   * registrando un mantenimiento al mismo tiempo.
+   */
   async update(id: string, input: UpdateEquipmentInput): Promise<EquipmentDto> {
     try {
       return await this.db.$transaction(async (tx) => {
@@ -119,6 +134,7 @@ export class EquipmentService {
     }
   }
 
+  /** elimina un equipo; su historial de mantenimientos se elimina con él (ON DELETE CASCADE) */
   async remove(id: string): Promise<void> {
     try {
       await this.db.equipment.delete({ where: { id } });
@@ -127,6 +143,7 @@ export class EquipmentService {
     }
   }
 
+  /** historial de mantenimientos de un equipo, del más reciente al más antiguo; 404 si el equipo no existe */
   async listMaintenances(id: string) {
     await this.get(id);
     const rows = await this.db.maintenanceRecord.findMany({
@@ -136,7 +153,7 @@ export class EquipmentService {
     return rows.map(toMaintenanceDto);
   }
 
-  /** records a service and restarts the cycle: the reading becomes the start of the next one */
+  /** registra un mantenimiento y reinicia el ciclo: la lectura pasa a ser el inicio del siguiente */
   async registerMaintenance(id: string, input: CreateMaintenanceInput, performedBy: string) {
     try {
       return await this.db.$transaction(async (tx) => {

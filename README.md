@@ -1,5 +1,7 @@
 # Registro de equipos mineros
 
+**Autor:** Bryan Ternero · [github.com/Bryan-Ternero](https://github.com/Bryan-Ternero)
+
 Aplicación web para registrar los equipos de una faena (camiones, excavadoras y perforadoras),
 llevar su horómetro y saber cuándo cada uno **requiere mantenimiento**. Registrar un servicio
 deja historial y reinicia el ciclo del equipo.
@@ -12,6 +14,108 @@ Frontend y backend se publican por separado y se despliegan con **un solo comand
 | Aplicación (frontend) | <https://mining-equipment-web.vercel.app> |
 | API (backend) | <https://api-production-cb462.up.railway.app> |
 | Health | <https://api-production-cb462.up.railway.app/health> |
+
+---
+
+## Qué se realizó
+
+| Entrega | Resumen |
+|---|---|
+| **Aplicación** | Registro de equipos con alta, edición, baja y listado; aviso de "Requiere mantenimiento" por tipo; registro de mantenimientos con fecha y hora, comentarios y autor, que reinicia el ciclo del equipo. |
+| **Login por roles** | Supervisor y operador, aplicado en la API (cada ruta) y en la interfaz (cada botón). Pantalla de ingreso 60/40 con la imagen de la operación. |
+| **Identidad visual** | Diseño basado en el estilo Webpixels: barra lateral, tarjetas de resumen, tabla con filtros y búsqueda, estados con color. Funciona en escritorio y celular. |
+| **API REST** | Fastify sobre PostgreSQL, con `/health` que comprueba la base y reporta la versión desplegada. |
+| **Despliegue automatizado** | `./deploy.sh`: verifica, construye, migra, publica, comprueba y vuelve atrás solo si algo falla. |
+| **Calidad** | Pruebas unitarias y de integración contra PostgreSQL real, CI en GitHub Actions, stack local con Docker. |
+
+## Cómo se hizo
+
+### Arquitectura
+
+```
+ Navegador ──► Frontend (React + Vite) ──────► API REST (Fastify) ──► PostgreSQL
+               Vercel, sitio estático          Railway                 Railway
+                                                 ▲
+ ./deploy.sh ── build local ── migraciones ──────┘── publica API y web ── verifica /health
+```
+
+- **Monorepo** con `apps/api` y `apps/web`: cada uno se construye y publica por separado, con su
+  propia URL, como pide el reto.
+- **La API concentra las reglas.** El frontend solo muestra lo que la API calcula, así ninguna regla
+  queda duplicada.
+
+### Decisiones de diseño
+
+| Decisión | Por qué |
+|---|---|
+| **El estado "Requiere mantenimiento" se calcula, no se guarda** | Se deriva del horómetro, la lectura del último servicio y el intervalo del tipo. Al no estar guardado, nunca puede quedar desactualizado. |
+| **Registrar un mantenimiento fija el inicio del ciclo en la lectura actual** | Es el "reinicia el ciclo" del enunciado: el próximo aviso llega a *lectura + intervalo*. |
+| **Los tipos y sus intervalos viven en una tabla** (`equipment_types`) | Cambiar un intervalo o sumar un tipo es una migración, no un cambio de lógica. |
+| **Reglas protegidas también en la base** (`CHECK`, claves foráneas, bloqueo de fila) | Aunque dos personas registren un servicio al mismo tiempo, el horómetro nunca queda por debajo del historial. |
+| **Cuentas de login en variables de entorno**, con contraseñas solo como hash scrypt | El reto pide dos roles fijos: no hace falta una tabla de usuarios, y los secretos viven donde viven los secretos (Railway), nunca en el repositorio. |
+| **Migraciones solo hacia adelante** | Por eso el despliegue se niega a publicar una versión anterior a la que corre en producción. |
+| **El frontend tolera tipos que no conoce** y tiene una pantalla de recuperación | Si la base va por delante del código, la interfaz muestra un ícono genérico en lugar de quedarse en blanco. |
+
+### Proceso de trabajo
+
+1. **Especificación primero.** Los requisitos del PDF se citaron textualmente en
+   [`odd/tasks/`](odd/tasks/), junto con las suposiciones y una bitácora de cada decisión.
+2. **Pruebas antes del código.** Cada regla se escribió primero como una prueba que fallaba y
+   después se implementó.
+3. **Cambios chicos y revisados.** Cada parte entró a `main` por un pull request. Desde que existe
+   el CI (PR #4) cada uno se integró con el CI en verde; los tres primeros, anteriores al CI, se
+   verificaron corriendo las mismas pruebas en local. Los cambios de riesgo pasaron además por una
+   revisión automática (gentle-ai) y sus hallazgos se corrigieron en commits propios.
+4. **Verificación real.** Cada despliegue se comprobó contra producción: `/health`, inicio de sesión
+   por rol y capturas en escritorio y celular.
+
+## Cumplimiento del reto
+
+### La aplicación
+
+| Requisito del reto | Estado | Dónde |
+|---|:---:|---|
+| Crear, listar, editar y eliminar equipos: código, tipo y horómetro | ✅ | `apps/api/src/routes/equipment.ts`, pruebas en `apps/api/tests/integration/equipment.spec.ts` |
+| Cada tipo tiene un intervalo; al alcanzarlo se muestra "Requiere mantenimiento" | ✅ | `apps/api/src/domain/maintenance.ts` y sus pruebas unitarias |
+| Registrar un mantenimiento deja historial y reinicia el ciclo | ✅ | `apps/api/src/services/equipment-service.ts`, pruebas en `maintenance.spec.ts` |
+
+### Requisitos técnicos
+
+| Requisito del reto | Estado | Dónde |
+|---|:---:|---|
+| Frontend y backend separados, cada uno con su URL pública | ✅ | Vercel y Railway (ver URLs arriba) |
+| API REST con una ruta `/health` | ✅ | `apps/api/src/routes/health.ts`: `200` si la base responde, `503` si no |
+| Base de datos relacional | ✅ | PostgreSQL 18 con migraciones versionadas en `apps/api/prisma/migrations` |
+| Sin claves en el repositorio, con `.env.example` | ✅ | [`.env.example`](.env.example); ningún `.env` ni credencial en el historial |
+
+### La automatización (un solo comando)
+
+| Requisito del reto | Estado | Cómo lo hace `./deploy.sh` |
+|---|:---:|---|
+| 1. Verifica herramientas y variables antes de empezar | ✅ | Paso 1: lista todo lo que falta de una vez (código `2`) |
+| 2. Construye y publica frontend y backend | ✅ | Pasos 4 y 6: build local y publicación en Railway y Vercel |
+| 3. Aplica las migraciones | ✅ | Paso 5: `prisma migrate deploy`, solo las pendientes |
+| 4. Comprueba al final ambos servicios con `/health` | ✅ | Paso 7: `/health`, versión publicada, login exigido, CORS y sitio |
+| 5. Error claro y código distinto de 0 si algo falla | ✅ | Mensaje `FAILED` y un código por etapa (`2` a `10`) |
+| Puede ejecutarse varias veces sin romper nada | ✅ | Migraciones idempotentes; volver a publicar reemplaza el deployment |
+
+### Entrega
+
+| Requisito del reto | Estado |
+|---|:---:|
+| Repositorio público en GitHub | ✅ |
+| URL pública del frontend y del backend | ✅ |
+| README con qué hace, cómo levantarlo en local y cómo desplegarlo | ✅ |
+| README con las herramientas de IA usadas | ✅ |
+
+### Puntos opcionales ("suma puntos")
+
+| Opcional | Estado | Dónde |
+|---|:---:|---|
+| Vuelta a la versión anterior si el despliegue falla | ✅ | [Rollback automático](#rollback-automático), ensayado en producción |
+| Docker o docker-compose | ✅ | [`docker-compose.yml`](docker-compose.yml): base, migraciones, API y web |
+| GitHub Actions | ✅ | [`ci.yml`](.github/workflows/ci.yml): lint, tipos, pruebas, build y fallas de `deploy.sh` |
+| Pruebas automatizadas | ✅ | API (unitarias e integración con PostgreSQL) y frontend |
 
 ---
 
@@ -31,7 +135,7 @@ Frontend y backend se publican por separado y se despliegan con **un solo comand
 | Función | Regla |
 |---|---|
 | **Equipos** | Crear, listar, editar y eliminar. Cada equipo tiene código único (`CAM-001`), tipo y horómetro (horas de uso). |
-| **Intervalo por tipo** | Camión cada **250 h**, excavadora cada **500 h**, perforadora cada **300 h**. Los intervalos viven en la tabla `equipment_types`. |
+| **Intervalo por tipo** | Camión cada **250 h**, excavadora cada **500 h**, perforadora cada **300 h** y cargador frontal cada **400 h** (agregado de forma temporal para probar el despliegue de una migración nueva). Los intervalos viven en la tabla `equipment_types`. |
 | **Requiere mantenimiento** | Un equipo lo muestra cuando las horas usadas desde su último servicio **alcanzan** el intervalo de su tipo (`horas desde el servicio >= intervalo`). El estado se calcula en cada consulta, nunca se guarda, así que no puede quedar desactualizado. |
 | **Registrar mantenimiento** | Guarda en el historial la **fecha y hora** en que se realizó, los **comentarios**, la lectura del horómetro y **quién lo registró**, y **reinicia el ciclo**: la lectura del servicio pasa a ser el inicio del ciclo siguiente. |
 | **Login por roles** | Pantalla 60/40 (foto de la operación y nombre del proyecto / formulario). Dos cuentas, una por rol. Sin sesión, la API solo responde `/health`. |
@@ -252,14 +356,18 @@ Después se completan `PUBLIC_API_URL`, `PUBLIC_WEB_URL`, `RAILWAY_PROJECT_ID` y
 
 ## Uso de inteligencia artificial
 
-| Herramienta | Para qué |
+Como permite el reto, usé herramientas de IA como apoyo. El diseño, las decisiones de alcance,
+la revisión de cada cambio y la publicación fueron míos; puedo explicar cada parte de lo
+entregado.
+
+| Herramienta | Para qué la usé |
 |---|---|
-| **Claude Code** (Claude Opus) | Agente de código: análisis del enunciado, implementación, pruebas, script de despliegue, CI y documentación, con decisiones de alcance tomadas por mí. |
-| **gentle-ai** | Flujo de trabajo del agente: Organic Driven Development (ODD) con especificación y bitácora en [`odd/`](odd/), y revisión de riesgo por cada commit (lentes de riesgo, confiabilidad, resiliencia y legibilidad). |
-| **Engram** | Memoria persistente del agente entre sesiones. |
+| **Claude Code** (Claude Opus) | Asistente de programación: análisis del enunciado, propuestas de implementación, pruebas, script de despliegue, CI y redacción de la documentación, siempre bajo mis indicaciones. |
+| **gentle-ai** | Organización del trabajo: especificación y bitácora en [`odd/`](odd/) y revisión de riesgo de cada cambio antes de integrarlo. |
+| **Engram** | Memoria del asistente entre sesiones de trabajo. |
 | **Railway CLI / Vercel CLI / GitHub CLI** | Provisión y despliegue reales. |
 
-Cada regla del dominio tiene pruebas, cada commit de código pasó por la evaluación de riesgo
-de gentle-ai, y los hallazgos de esas revisiones se corrigieron en commits propios
-(`fix(api)`, `fix(web)`, `fix(deploy)`). La especificación completa, con los requisitos del
-enunciado citados textualmente, está en [`odd/tasks/mining-equipment-registry.md`](odd/tasks/mining-equipment-registry.md).
+Cada regla del dominio tiene pruebas, los cambios de riesgo pasaron por una revisión antes de
+integrarse y sus hallazgos se corrigieron en commits propios (`fix(api)`, `fix(web)`,
+`fix(deploy)`). La especificación, con los requisitos del enunciado citados textualmente, está en
+[`odd/tasks/mining-equipment-registry.md`](odd/tasks/mining-equipment-registry.md).

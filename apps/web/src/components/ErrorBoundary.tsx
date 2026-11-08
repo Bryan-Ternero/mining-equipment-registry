@@ -11,8 +11,8 @@ interface ErrorBoundaryState {
 }
 
 /**
- * Last line of defence: without it, any error while rendering unmounts the whole app and the
- * user is left with an empty page. Here it shows what happened and how to get out of it.
+ * Última línea de defensa: sin ella, cualquier error al renderizar desmonta toda la app y el
+ * usuario se queda con una página vacía. Aquí se muestra qué pasó y cómo salir de ello.
  */
 export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   state: ErrorBoundaryState = { failed: false };

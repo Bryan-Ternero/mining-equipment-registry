@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 /**
- * Post-deploy verification used by deploy.sh.
+ * Verificación posterior al deploy que usa deploy.sh.
  *
- * Env: PUBLIC_API_URL, PUBLIC_WEB_URL, EXPECTED_VERSION,
- *      VERIFY_SCOPE=all|web (web: only the frontend, used on the unpromoted candidate),
- *      VERIFY_ATTEMPTS (default 6, with growing waits: routing and aliases take a few seconds),
- *      VERIFY_LOGIN=0 to skip the login check (a rollback may restore a version older than the login).
+ * Entorno: PUBLIC_API_URL, PUBLIC_WEB_URL, EXPECTED_VERSION,
+ *      VERIFY_SCOPE=all|web (web: solo el frontend, se usa con el candidato sin promover),
+ *      VERIFY_ATTEMPTS (por defecto 6, con esperas crecientes: el ruteo y los alias tardan unos segundos),
+ *      VERIFY_LOGIN=0 para omitir la verificación del login (un rollback puede restaurar una versión anterior al login).
  *
- * Exit codes: 0 healthy, 1 a check failed, 3 the frontend is behind Vercel Deployment
- * Protection (a login wall, so it cannot be inspected from here).
+ * Códigos de salida: 0 todo sano, 1 falló una verificación, 3 el frontend está detrás de Vercel
+ * Deployment Protection (un muro de login, así que no se puede inspeccionar desde aquí).
  */
 
 const api = (process.env.PUBLIC_API_URL ?? '').replace(/\/$/, '');
@@ -18,7 +18,7 @@ const scope = process.env.VERIFY_SCOPE ?? 'all';
 const attempts = Number(process.env.VERIFY_ATTEMPTS ?? 6);
 const checkLogin = process.env.VERIFY_LOGIN !== '0';
 
-// a bad value must never turn into "zero checks, exit 0"
+// un valor inválido nunca debe convertirse en "cero verificaciones, exit 0"
 if (!Number.isInteger(attempts) || attempts < 1) {
   console.error(`    fail  VERIFY_ATTEMPTS must be a positive integer (got ${process.env.VERIFY_ATTEMPTS})`);
   process.exit(1);
@@ -45,7 +45,7 @@ async function checkApi() {
     throw new Error(`API reports version ${health.version}, expected ${expectedVersion} (old build still live?)`);
   }
 
-  // the login must be live: anonymous calls are rejected and the login route answers
+  // el login debe estar activo: las llamadas anónimas se rechazan y la ruta de login responde
   if (checkLogin) {
   const anonymous = await get(`${api}/api/equipment`);
   if (anonymous.status !== 401) {
@@ -79,7 +79,7 @@ async function checkWeb() {
   const html = await res.text();
   if (!html.includes('id="root"')) throw new Error('frontend did not return the application page');
 
-  // the API URL is baked in at build time: a wrong value means a broken site even if it loads
+  // la URL de la API queda fijada en tiempo de build: un valor incorrecto implica un sitio roto aunque cargue
   const script = html.match(/src="(\/assets\/[^"]+\.js)"/)?.[1];
   if (!script) throw new Error('frontend page has no application bundle');
   const bundle = await (await get(`${web}${script}`)).text();

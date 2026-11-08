@@ -13,7 +13,7 @@ export interface Session {
 
 const KEY = 'equipment-registry.session';
 
-/** a stored session, or null when it is missing, malformed, tampered with or expired */
+/** una sesión guardada, o null cuando falta, está mal formada, fue manipulada o expiró */
 export function parseSession(raw: string | null, now = Date.now()): Session | null {
   if (!raw) return null;
   try {
@@ -23,7 +23,7 @@ export function parseSession(raw: string | null, now = Date.now()): Session | nu
       typeof data?.expiresAt === 'string' &&
       typeof data?.user?.username === 'string' &&
       (data.user.role === 'SUPERVISOR' || data.user.role === 'OPERADOR');
-    // an unparseable date is NaN, and "NaN <= now" is false: check it explicitly
+    // una fecha no interpretable es NaN, y "NaN <= now" es false: se comprueba explícitamente
     const expires = new Date(data.expiresAt).getTime();
     if (!valid || !Number.isFinite(expires) || expires <= now) return null;
     return { token: data.token, expiresAt: data.expiresAt, user: { username: data.user.username, role: data.user.role } };
@@ -32,7 +32,8 @@ export function parseSession(raw: string | null, now = Date.now()): Session | nu
   }
 }
 
-// storage can be unavailable (private mode, blocked site data): the app then just asks to log in again
+// el almacenamiento puede no estar disponible (modo privado, datos del sitio bloqueados): la app entonces
+// solo pide iniciar sesión de nuevo
 export function loadSession(): Session | null {
   try {
     return parseSession(localStorage.getItem(KEY));
@@ -45,7 +46,7 @@ export function saveSession(session: Session) {
   try {
     localStorage.setItem(KEY, JSON.stringify(session));
   } catch {
-    /* the session still lives in memory for this tab */
+    /* la sesión sigue viva en memoria para esta pestaña */
   }
 }
 
@@ -53,6 +54,6 @@ export function clearSession() {
   try {
     localStorage.removeItem(KEY);
   } catch {
-    /* nothing stored */
+    /* nada guardado */
   }
 }

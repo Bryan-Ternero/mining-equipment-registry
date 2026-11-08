@@ -1,3 +1,8 @@
+/**
+ * Construye la aplicación Fastify: CORS, el guard de sesión, una única forma de error para todos los
+ * fallos y los plugins de rutas. server.ts la pone a escuchar; los tests la construyen con una
+ * configuración y una base de datos inyectadas.
+ */
 import cors from '@fastify/cors';
 import type { PrismaClient } from '@prisma/client';
 import Fastify, { type FastifyInstance } from 'fastify';
@@ -15,13 +20,13 @@ export interface AppDeps {
   logger?: boolean;
 }
 
-/** routes reachable without a session; everything else under /api needs one */
+/** rutas accesibles sin sesión; todo lo demás bajo /api la requiere */
 const PUBLIC_API_ROUTES = new Set(['POST /api/auth/login']);
 
 export function buildApp({ config, db, logger = false }: AppDeps): FastifyInstance {
-  // behind Railway's proxy: trust exactly that one hop, so request.ip is the address the proxy
-  // appended to X-Forwarded-For. Trusting every hop would let a client forge its own address and
-  // dodge the login throttle.
+  // detrás del proxy de Railway: se confía exactamente en ese único salto, así request.ip es la
+  // dirección que el proxy agregó a X-Forwarded-For. Confiar en todos los saltos permitiría que un
+  // cliente falsificara su propia dirección y esquivara el límite de intentos de login.
   const app = Fastify({ logger, trustProxy: (_address: string, hop: number) => hop < 1 });
 
   app.register(cors, {
@@ -34,15 +39,16 @@ export function buildApp({ config, db, logger = false }: AppDeps): FastifyInstan
   app.addHook('onRequest', async (request) => {
     request.user = sessionFrom(request, config.auth.tokenSecret);
   });
-  // decided on the route the router matched, never on the raw URL: the router decodes the path,
-  // so "/%61pi/equipment" reaches "/api/equipment" while failing a raw "/api/" prefix check
+  // se decide según la ruta que encontró el router, nunca según la URL cruda: el router decodifica
+  // la ruta, así que "/%61pi/equipment" llega a "/api/equipment" aunque no pase una verificación
+  // del prefijo "/api/" sobre la URL cruda
   app.addHook('preHandler', async (request) => {
     const route = request.routeOptions.url;
     if (request.method === 'OPTIONS' || !route?.startsWith('/api/')) return;
     if (!request.user && !PUBLIC_API_ROUTES.has(`${request.method} ${route}`)) throw unauthorized();
   });
 
-  // one error shape for every failure: { error: { code, message, details? } }
+  // una única forma de error para todos los fallos: { error: { code, message, details? } }
   app.setErrorHandler((error, request, reply) => {
     if (error instanceof AppError) {
       const retry = (error.details as { retryAfterSeconds?: number } | undefined)?.retryAfterSeconds;
@@ -53,7 +59,7 @@ export function buildApp({ config, db, logger = false }: AppDeps): FastifyInstan
     }
     const status = (error as { statusCode?: number }).statusCode;
     if (status && status >= 400 && status < 500) {
-      // malformed JSON, payload too large, wrong content type...
+      // JSON mal formado, payload demasiado grande, content type incorrecto...
       return reply.status(status).send({ error: { code: 'BAD_REQUEST', message: (error as Error).message } });
     }
     request.log.error(error);

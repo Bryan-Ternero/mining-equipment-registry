@@ -1,7 +1,7 @@
-# Local container for the API (docker compose --profile full).
-# Named Dockerfile.local on purpose: a plain Dockerfile would switch the Railway production build.
+# Contenedor local para la API (docker compose --profile full).
+# Se llama Dockerfile.local a propósito: un Dockerfile común cambiaría el build de producción de Railway.
 
-# build keeps the dev dependencies: the compose "migrate" service runs the Prisma CLI from here
+# build conserva las dependencias de desarrollo: el servicio "migrate" de compose ejecuta la CLI de Prisma desde aquí
 FROM node:24-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./

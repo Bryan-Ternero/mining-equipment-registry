@@ -7,11 +7,11 @@ export const PROJECT_NAME = 'Registro de equipos mineros';
 
 interface LoginScreenProps {
   onLoggedIn: (session: Session) => void;
-  /** shown when the previous session expired */
+  /** se muestra cuando la sesión anterior expiró */
   notice?: string | null;
 }
 
-/** 60/40 login: the operation on the left (image + project name), the form on the right */
+/** login 60/40: la operación a la izquierda (imagen + nombre del proyecto), el formulario a la derecha */
 export function LoginScreen({ onLoggedIn, notice }: LoginScreenProps) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');

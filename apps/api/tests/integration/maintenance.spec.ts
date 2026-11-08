@@ -12,7 +12,7 @@ describe('maintenance warning', () => {
     const reached = await inject({ method: 'PATCH', url: `/api/equipment/${truck.id}`, payload: { hourmeter: 250 } });
     expect(reached.json()).toMatchObject({ requiresMaintenance: true, hoursUntilMaintenance: 0 });
 
-    // each type has its own interval: 300 h is due for a drill, not for an excavator
+    // cada tipo tiene su propio intervalo: 300 h requiere mantenimiento en una perforadora, no en una excavadora
     const drill = await createEquipment({ code: 'PER-1', typeCode: 'PERFORADORA', hourmeter: 300 });
     const excavator = await createEquipment({ code: 'EXC-1', typeCode: 'EXCAVADORA', hourmeter: 300 });
     expect(drill.requiresMaintenance).toBe(true);
@@ -37,7 +37,7 @@ describe('registering a maintenance', () => {
       requiresMaintenance: false,
     });
 
-    // the new cycle is a full interval long: due again at 280 + 250 = 530
+    // el nuevo ciclo dura un intervalo completo: vuelve a requerir mantenimiento en 280 + 250 = 530
     const before = await inject({ method: 'PATCH', url: `/api/equipment/${truck.id}`, payload: { hourmeter: 529.9 } });
     expect(before.json().requiresMaintenance).toBe(false);
     const due = await inject({ method: 'PATCH', url: `/api/equipment/${truck.id}`, payload: { hourmeter: 530 } });

@@ -1,3 +1,6 @@
+/**
+ * Rutas de login y del usuario actual. El login es la única ruta de /api accesible sin sesión.
+ */
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { requireUser } from '../auth/guard.js';
@@ -13,7 +16,7 @@ const loginSchema = z.object({
   password: z.string({ error: 'Ingrese su contraseña.' }).min(1, 'Ingrese su contraseña.').max(200),
 });
 
-// a valid hash to compare against when the user does not exist, so both cases take the same time
+// un hash válido contra el cual comparar cuando el usuario no existe, así ambos casos tardan lo mismo
 const DUMMY_HASH = 'scrypt:16384:8:1:AAAAAAAAAAAAAAAAAAAAAA:' + 'A'.repeat(86);
 
 export const authRoutes: FastifyPluginAsync<{ auth: Config['auth'] }> = async (app, { auth }) => {

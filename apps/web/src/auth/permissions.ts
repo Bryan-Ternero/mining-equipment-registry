@@ -3,15 +3,15 @@ export type Role = 'SUPERVISOR' | 'OPERADOR';
 export type Action = 'registerMaintenance' | 'updateHourmeter' | 'createEquipment' | 'deleteEquipment' | 'editIdentity';
 
 /**
- * What each role may do in the interface. The API enforces the same rules; this only hides
- * actions the user cannot perform, so nobody clicks a button that answers 403.
+ * Lo que cada rol puede hacer en la interfaz. La API aplica las mismas reglas; esto solo oculta
+ * las acciones que el usuario no puede realizar, para que nadie pulse un botón que responda 403.
  */
 const RULES: Record<Action, Role[]> = {
   registerMaintenance: ['SUPERVISOR', 'OPERADOR'],
   updateHourmeter: ['SUPERVISOR', 'OPERADOR'],
   createEquipment: ['SUPERVISOR'],
   deleteEquipment: ['SUPERVISOR'],
-  // code and type: the identity of the equipment
+  // código y tipo: la identidad del equipo
   editIdentity: ['SUPERVISOR'],
 };
 

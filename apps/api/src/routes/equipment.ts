@@ -1,3 +1,6 @@
+/**
+ * Rutas REST de equipos: validan la entrada, verifican el rol y delegan en EquipmentService.
+ */
 import type { FastifyPluginAsync } from 'fastify';
 import { requireRole, requireUser } from '../auth/guard.js';
 import {
@@ -10,8 +13,8 @@ import {
 import type { EquipmentService } from '../services/equipment-service.js';
 
 /**
- * Roles: both can read, update the hourmeter and register maintenance; only the supervisor
- * creates, deletes, recodes or retypes equipment.
+ * Roles: ambos pueden leer, actualizar el horómetro y registrar mantenimientos; solo el supervisor
+ * crea, elimina o cambia el código o el tipo de los equipos.
  */
 export const equipmentRoutes: FastifyPluginAsync<{ service: EquipmentService }> = async (app, { service }) => {
   app.get('/equipment-types', async () => {
@@ -33,7 +36,7 @@ export const equipmentRoutes: FastifyPluginAsync<{ service: EquipmentService }> 
   });
 
   app.patch('/equipment/:id', async (request) => {
-    requireUser(request); // defense in depth: never rely on the global hook alone for a write
+    requireUser(request); // defensa en profundidad: nunca depender solo del hook global para una escritura
     const { id } = parse(idParamSchema, request.params);
     const input = parse(updateEquipmentSchema, request.body);
     if (input.code !== undefined || input.typeCode !== undefined) {

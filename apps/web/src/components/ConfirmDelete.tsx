@@ -1,3 +1,6 @@
+/**
+ * Confirmación antes de eliminar un equipo: su historial se elimina con él y no se puede deshacer.
+ */
 import { useState } from 'react';
 import { ApiError, type Equipment } from '../api';
 import { Modal } from './Modal';

@@ -1,4 +1,4 @@
-/** Error with an HTTP status and a stable machine-readable code. */
+/** Error con un status HTTP y un código estable legible por máquinas. */
 export class AppError extends Error {
   constructor(
     readonly status: number,

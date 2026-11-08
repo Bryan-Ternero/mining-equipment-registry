@@ -8,7 +8,8 @@ describe('iconFor', () => {
   });
 
   it('falls back to a generic icon for a type the frontend does not know yet', () => {
-    // a newer API (or a migration ahead of this build) may send types this bundle never saw
+    // una API más reciente (o una migración por delante de este build) puede enviar tipos que este bundle
+    // nunca vio
     expect(iconFor('GRUA')).toBe(GenericEquipmentIcon);
     expect(iconFor('')).toBe(GenericEquipmentIcon);
   });

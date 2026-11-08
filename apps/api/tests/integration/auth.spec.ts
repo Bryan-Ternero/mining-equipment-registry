@@ -61,7 +61,7 @@ describe('login', () => {
 
   it('keys the limit on the address the proxy saw, not on a forged X-Forwarded-For', async () => {
     const throttled = buildApp({ config, db });
-    // the client forges the leftmost entry; the platform proxy appends the real address last
+    // el cliente falsifica la entrada de más a la izquierda; el proxy de la plataforma agrega la dirección real al final
     const attempt = (i: number, password = 'bad') =>
       throttled.inject({
         method: 'POST',

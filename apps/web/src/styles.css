@@ -1,7 +1,7 @@
 /*
- * Visual identity after the Webpixels "Bootstrap Table Screen" style:
- * Inter, indigo primary, light gray canvas, white cards with soft shadows, uppercase muted
- * table headers and soft badges with a status dot.
+ * Identidad visual basada en el estilo "Bootstrap Table Screen" de Webpixels:
+ * Inter, primario índigo, lienzo gris claro, tarjetas blancas con sombras suaves, encabezados de
+ * tabla en mayúsculas y atenuados, y badges suaves con un punto de estado.
  */
 :root {
   --primary: #5c60f5;
@@ -78,7 +78,7 @@ h2 {
   outline-offset: 2px;
 }
 
-/* ---------------------------------------------------------------- buttons */
+/* ---------------------------------------------------------------- botones */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -308,7 +308,7 @@ h2 {
   justify-content: center;
 }
 
-/* ---------------------------------------------------------------- app shell */
+/* ---------------------------------------------------------------- estructura de la app */
 .shell {
   display: grid;
   grid-template-columns: var(--sidebar-width) 1fr;
@@ -423,7 +423,7 @@ h2 {
   margin: 0.35rem 0 0;
 }
 
-/* ---------------------------------------------------------------- stat cards */
+/* ---------------------------------------------------------------- tarjetas de estadísticas */
 .stats {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -485,7 +485,7 @@ h2 {
   background: var(--success);
 }
 
-/* ---------------------------------------------------------------- table card */
+/* ---------------------------------------------------------------- tarjeta de tabla */
 .table-card-header {
   display: flex;
   align-items: center;
@@ -691,7 +691,7 @@ h2 {
   display: none;
 }
 
-/* ---------------------------------------------------------------- forms */
+/* ---------------------------------------------------------------- formularios */
 .form {
   display: flex;
   flex-direction: column;
@@ -876,7 +876,7 @@ textarea {
   max-width: calc(100vw - 32px);
 }
 
-/* ---------------------------------------------------------------- responsive */
+/* ---------------------------------------------------------------- diseño adaptable */
 @media (max-width: 960px) {
   .login {
     grid-template-columns: 1fr;
@@ -987,7 +987,7 @@ textarea {
   }
 }
 
-/* ---------------------------------------------------------------- fatal error screen */
+/* ---------------------------------------------------------------- pantalla de error fatal */
 .fatal {
   min-height: 100vh;
   display: flex;

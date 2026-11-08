@@ -1,8 +1,8 @@
-// Data model of the equipment registry.
+// Modelo de datos del registro de equipos.
 //
-// - The maintenance interval belongs to the equipment type (catalogue table), not to code.
-// - "Requiere mantenimiento" is derived from hourmeter, lastServiceHours and the interval:
-//   it is never stored, so it cannot drift out of sync with the hourmeter or the history.
+// - El intervalo de mantenimiento pertenece al tipo de equipo (tabla de catálogo), no al código.
+// - "Requiere mantenimiento" se deriva del horómetro, lastServiceHours y el intervalo:
+//   nunca se guarda, así no puede desincronizarse del horómetro ni del historial.
 
 generator client {
   provider = "prisma-client-js"
@@ -13,7 +13,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-/// Equipment family and its maintenance interval. Rows are inserted by a migration.
+/// Familia de equipos y su intervalo de mantenimiento. Las filas se insertan mediante una migración.
 model EquipmentType {
   code                     String @id // CAMION | EXCAVADORA | PERFORADORA
   name                     String
@@ -29,10 +29,10 @@ model Equipment {
   code     String @unique
   typeCode String
 
-  /// accumulated hours of use
+  /// horas de uso acumuladas
   hourmeter Decimal @default(0) @db.Decimal(10, 1)
 
-  /// hourmeter reading at the last service: the start of the current cycle (0 until the first one)
+  /// lectura del horómetro en el último mantenimiento: el inicio del ciclo actual (0 hasta el primero)
   lastServiceHours Decimal @default(0) @db.Decimal(10, 1)
 
   createdAt DateTime @default(now())
@@ -45,15 +45,15 @@ model Equipment {
   @@map("equipment")
 }
 
-/// One service performed on an equipment. Registering it restarts the equipment's cycle.
+/// Un mantenimiento realizado a un equipo. Registrarlo reinicia el ciclo del equipo.
 model MaintenanceRecord {
   id          String   @id @default(uuid()) @db.Uuid
   equipmentId String   @db.Uuid
-  /// hourmeter reading when the service was performed
+  /// lectura del horómetro cuando se realizó el mantenimiento
   hourmeter   Decimal  @db.Decimal(10, 1)
   performedAt DateTime @default(now())
   notes       String?
-  /// username of the session that registered it (null for records older than the login)
+  /// usuario de la sesión que lo registró (null en los registros anteriores al login)
   performedBy String?
   createdAt   DateTime @default(now())
 

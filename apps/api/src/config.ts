@@ -1,9 +1,13 @@
+/**
+ * Configuración de ejecución a partir de variables de entorno. Falla al arrancar listando todas
+ * las variables faltantes, así un deploy mal configurado nunca empieza a atender peticiones.
+ */
 import type { Role } from './auth/tokens.js';
 
 export interface Account {
   username: string;
   role: Role;
-  /** scrypt hash from `npm run auth:hash`, never the password */
+  /** hash scrypt generado con `npm run auth:hash`, nunca la contraseña */
   passwordHash: string;
 }
 
@@ -17,7 +21,7 @@ export interface Config {
   };
 }
 
-/** reads the runtime configuration; DATABASE_URL is read by Prisma itself */
+/** lee la configuración de ejecución; DATABASE_URL la lee el propio Prisma */
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   const missing: string[] = [];
   const required = (name: string) => {
@@ -56,12 +60,12 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
 
   return {
     port: Number(env.PORT ?? 3001),
-    // comma-separated list, so a local and a deployed frontend can both be allowed
+    // lista separada por comas, así se pueden permitir a la vez un frontend local y uno desplegado
     webOrigins: (env.WEB_ORIGIN ?? 'http://localhost:5173')
       .split(',')
       .map((origin) => origin.trim().replace(/\/$/, ''))
       .filter(Boolean),
-    // set by deploy.sh to the deployed commit, so /health proves which build is live
+    // deploy.sh la fija en el commit desplegado, así /health demuestra qué build está en producción
     version: env.APP_VERSION ?? 'dev',
     auth: { tokenSecret, accounts },
   };
