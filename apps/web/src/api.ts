@@ -3,8 +3,14 @@ import type { Session } from './auth/session';
 // CARGADOR is temporary (deploy test)
 export type TypeCode = 'CAMION' | 'EXCAVADORA' | 'PERFORADORA' | 'CARGADOR';
 
+/**
+ * A type code as the API sends it. The catalogue lives in the database and can be ahead of this
+ * build, so it is a plain string: never assume it is one of the TypeCode values above.
+ */
+export type ApiTypeCode = string;
+
 export interface EquipmentType {
-  code: TypeCode;
+  code: ApiTypeCode;
   name: string;
   maintenanceIntervalHours: number;
 }
@@ -12,7 +18,7 @@ export interface EquipmentType {
 export interface Equipment {
   id: string;
   code: string;
-  typeCode: TypeCode;
+  typeCode: ApiTypeCode;
   typeName: string;
   intervalHours: number;
   hourmeter: number;
@@ -37,7 +43,7 @@ export interface Maintenance {
 
 export interface EquipmentInput {
   code: string;
-  typeCode: TypeCode;
+  typeCode: ApiTypeCode;
   hourmeter: number;
 }
 

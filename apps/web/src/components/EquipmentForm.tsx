@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { ApiError, type Equipment, type EquipmentInput, type EquipmentType, type TypeCode } from '../api';
+import { ApiError, type Equipment, type EquipmentInput, type EquipmentType } from '../api';
 import { can, type Role } from '../auth/permissions';
 import { formatHours, parseHours } from '../format';
 import { Modal } from './Modal';
@@ -19,7 +19,7 @@ const FIELD_NAMES: FieldName[] = ['code', 'typeCode', 'hourmeter'];
 
 export function EquipmentForm({ types, role, equipment, onSubmit, onClose }: EquipmentFormProps) {
   const [code, setCode] = useState(equipment?.code ?? '');
-  const [typeCode, setTypeCode] = useState<TypeCode | ''>(equipment?.typeCode ?? '');
+  const [typeCode, setTypeCode] = useState<string>(equipment?.typeCode ?? '');
   const [hourmeter, setHourmeter] = useState(equipment ? String(equipment.hourmeter) : '0');
   const [fieldErrors, setFieldErrors] = useState<Fields>({});
   const [formError, setFormError] = useState<string | null>(null);
@@ -44,7 +44,7 @@ export function EquipmentForm({ types, role, equipment, onSubmit, onClose }: Equ
     setSaving(true);
     try {
       await onSubmit(
-        identityLocked ? { hourmeter: hours } : { code: code.trim(), typeCode: typeCode as TypeCode, hourmeter: hours },
+        identityLocked ? { hourmeter: hours } : { code: code.trim(), typeCode, hourmeter: hours },
       );
     } catch (error) {
       if (error instanceof ApiError) {
@@ -86,7 +86,7 @@ export function EquipmentForm({ types, role, equipment, onSubmit, onClose }: Equ
             <span>Tipo</span>
             <select
               value={typeCode}
-              onChange={(e) => setTypeCode(e.target.value as TypeCode)}
+              onChange={(e) => setTypeCode(e.target.value)}
               disabled={identityLocked}
               aria-invalid={Boolean(fieldErrors.typeCode)}
             >

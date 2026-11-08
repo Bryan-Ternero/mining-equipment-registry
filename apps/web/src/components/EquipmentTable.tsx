@@ -1,7 +1,7 @@
 import type { Equipment } from '../api';
 import { can, type Role } from '../auth/permissions';
 import { cycleProgress, formatHours } from '../format';
-import { EditIcon, typeIcon, TrashIcon, WrenchIcon } from './icons';
+import { EditIcon, iconFor, TrashIcon, WrenchIcon } from './icons';
 
 interface EquipmentTableProps {
   equipment: Equipment[];
@@ -31,7 +31,7 @@ export function EquipmentTable({ equipment, role, onEdit, onMaintenance, onDelet
         <tbody>
           {equipment.map((e) => {
             const progress = cycleProgress(e);
-            const Icon = typeIcon[e.typeCode];
+            const Icon = iconFor(e.typeCode);
             const level = e.requiresMaintenance ? 'due' : progress >= 80 ? 'warn' : '';
             return (
               <tr key={e.id}>
