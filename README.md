@@ -178,7 +178,7 @@ el script falle con código `2` cuando faltan variables o herramientas.
 |---|---|---|
 | 1. Preflight | Verifica `node`, `npm`, `git`, `curl`, `railway` y `vercel`, y las variables `PUBLIC_API_URL`, `PUBLIC_WEB_URL`, `RAILWAY_PROJECT_ID` y `VERCEL_PROJECT_NAME`. Lista **todo** lo que falta de una vez. | sale con `2` |
 | 2. Autenticación | Confirma la sesión de Railway y Vercel, vincula el proyecto de Vercel y comprueba que la API tenga sus cuentas de login cargadas en Railway (sin ellas no arranca). | `3`, `2` |
-| 3. Estado actual | Toma el commit a publicar y rechaza cambios sin commitear en `apps/`, `scripts/` o `deploy.sh`. Registra la versión que está viva: es el destino del rollback. | `4` |
+| 3. Estado actual | Toma el commit a publicar, rechaza cambios sin commitear en `apps/`, `scripts/` o `deploy.sh` y exige que ese commit **ya esté en GitHub** (`git push` antes de desplegar), así producción nunca corre código que el repositorio no tiene. Registra la versión que está viva: es el destino del rollback. | `4`, `3` |
 | 4. Build local | `npm ci` y build de la API y del frontend. Un error de compilación no llega a producción. | `5` |
 | 5. Migraciones | `prisma migrate deploy` contra la base de Railway, a través de su proxy TCP. Solo aplica las pendientes. | `6` |
 | 6. Publicación | Publica la API en Railway y espera el estado `SUCCESS` de **ese** deployment. Publica el frontend en Vercel **sin dominio**, lo verifica y recién entonces lo promueve a la URL pública. | `7`, `8` |
@@ -211,8 +211,8 @@ DEPLOY_SIMULATE_FAILURE=verify ./deploy.sh
 |---|---|
 | `0` | Desplegado y verificado |
 | `2` | Faltan herramientas o variables, o el argumento es inválido |
-| `3` | Railway o Vercel sin autenticar |
-| `4` | Cambios sin commitear en lo que se publica |
+| `3` | Railway o Vercel sin autenticar, o GitHub inaccesible |
+| `4` | Cambios sin commitear en lo que se publica, o el commit todavía no está en GitHub |
 | `5` | Falló el build local (no se publicó nada) |
 | `6` | Fallaron las migraciones (no se publicó nada) |
 | `7` | Falló la publicación de la API (producción sigue en la versión anterior) |
