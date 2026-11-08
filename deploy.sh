@@ -202,11 +202,14 @@ fi
 ancestor=0
 if [ -n "$PREV_API_VERSION" ]; then
   # 0: production is part of this history; 1: it is not (downgrade); anything else: git could
-  # not compare them (for example a shallow clone), which says nothing about a downgrade
-  git merge-base --is-ancestor "$PREV_API_VERSION" HEAD 2>/dev/null || ancestor=$?
+  # not compare them (shallow clone, missing objects). Unverifiable is refused too: fail closed.
+  git merge-base --is-ancestor "$PREV_API_VERSION" HEAD || ancestor=$?
 fi
-if [ "$ancestor" -gt 1 ]; then
-  warn "could not compare $VERSION with production ($PREV_API_VERSION): downgrade check skipped (shallow clone?)"
+if [ "$ancestor" -gt 1 ] && [ "$ALLOW_DOWNGRADE" -eq 0 ]; then
+  fail "Could not verify that $VERSION contains the production version $PREV_API_VERSION (git exit $ancestor).
+       Fetch the full history (git fetch --unshallow origin) and retry, or run ./deploy.sh --allow-downgrade." 4
+elif [ "$ancestor" -gt 1 ]; then
+  warn "could not compare $VERSION with production $PREV_API_VERSION: continuing on purpose (--allow-downgrade)"
 elif [ "$ancestor" -eq 1 ]; then
   if [ "$ALLOW_DOWNGRADE" -eq 0 ]; then
     fail "Production runs $PREV_API_VERSION, which is not part of the history of $VERSION:
