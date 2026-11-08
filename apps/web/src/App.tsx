@@ -45,6 +45,9 @@ export function App() {
     return () => clearTimeout(timer);
   }, [notice]);
 
+  // a save that finishes late only closes its own dialog, never one opened afterwards
+  const closeIf = (opened: Dialog) => setDialog((current) => (current === opened ? null : current));
+
   const upsert = (row: Equipment) =>
     setEquipment((rows) => [...(rows ?? []).filter((r) => r.id !== row.id), row].sort(byCode));
 
@@ -143,7 +146,7 @@ export function App() {
           onSubmit={async (input) => {
             const created = await api.create(input);
             upsert(created);
-            setDialog(null);
+            closeIf(dialog);
             setNotice(`Equipo ${created.code} creado.`);
           }}
         />
@@ -156,7 +159,7 @@ export function App() {
           onSubmit={async (input) => {
             const updated = await api.update(dialog.equipment.id, input);
             upsert(updated);
-            setDialog(null);
+            closeIf(dialog);
             setNotice(`Equipo ${updated.code} actualizado.`);
           }}
         />
@@ -167,7 +170,8 @@ export function App() {
           onClose={() => setDialog(null)}
           onRegistered={(updated) => {
             upsert(updated);
-            setDialog({ kind: 'maintenance', equipment: updated });
+            // keep the dialog open on the refreshed equipment, unless the user already left it
+            setDialog((current) => (current === dialog ? { kind: 'maintenance', equipment: updated } : current));
             setNotice(`Mantenimiento de ${updated.code} registrado: ciclo reiniciado.`);
           }}
         />
@@ -179,7 +183,7 @@ export function App() {
           onConfirm={async () => {
             await api.remove(dialog.equipment.id);
             setEquipment((rows) => rows?.filter((r) => r.id !== dialog.equipment.id) ?? null);
-            setDialog(null);
+            closeIf(dialog);
             setNotice(`Equipo ${dialog.equipment.code} eliminado.`);
           }}
         />

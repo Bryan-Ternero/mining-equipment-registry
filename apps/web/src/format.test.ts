@@ -22,6 +22,11 @@ describe('parseHours', () => {
     expect(parseHours(' 300 ')).toBe(300);
   });
 
+  it('accepts the same format the app displays, with a thousands separator', () => {
+    expect(parseHours('1.234,5')).toBe(1234.5);
+    expect(parseHours('12.000')).toBe(12000);
+  });
+
   it('returns null for an empty or non numeric input', () => {
     expect(parseHours('')).toBeNull();
     expect(parseHours('abc')).toBeNull();

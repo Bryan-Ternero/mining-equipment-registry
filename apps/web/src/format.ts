@@ -14,9 +14,17 @@ export function cycleProgress({ hoursSinceService, intervalHours }: { hoursSince
   return Math.min(100, Math.max(0, Math.round((hoursSinceService / intervalHours) * 100)));
 }
 
-/** reads an hours input typed with a decimal comma or point; null when it is not a number */
+/**
+ * Reads an hours input; null when it is not a number. Accepts what formatHours displays
+ * ("1.234,5": point for thousands, comma for decimals) and a plain decimal point ("120.5").
+ */
 export function parseHours(raw: string): number | null {
-  const text = raw.trim().replace(',', '.');
+  let text = raw.trim();
+  if (text.includes(',')) {
+    text = text.replaceAll('.', '').replace(',', '.');
+  } else if (/^\d{1,3}(\.\d{3})+$/.test(text)) {
+    text = text.replaceAll('.', '');
+  }
   if (text === '') return null;
   const value = Number(text);
   return Number.isFinite(value) ? value : null;
