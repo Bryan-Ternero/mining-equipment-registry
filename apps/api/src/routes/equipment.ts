@@ -55,9 +55,9 @@ export const equipmentRoutes: FastifyPluginAsync<{ service: EquipmentService }> 
   });
 
   app.post('/equipment/:id/maintenances', async (request, reply) => {
-    requireUser(request);
+    const user = requireUser(request);
     const { id } = parse(idParamSchema, request.params);
-    const result = await service.registerMaintenance(id, parse(createMaintenanceSchema, request.body));
+    const result = await service.registerMaintenance(id, parse(createMaintenanceSchema, request.body), user.username);
     return reply.status(201).send(result);
   });
 };

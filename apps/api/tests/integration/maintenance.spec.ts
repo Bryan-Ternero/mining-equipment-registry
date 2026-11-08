@@ -47,6 +47,30 @@ describe('registering a maintenance', () => {
     expect(stored).toHaveLength(1);
   });
 
+  it('stores the date and time, the comments and who performed it, and returns them in the history', async () => {
+    const truck = await createEquipment({ code: 'CAM-WHO', typeCode: 'CAMION', hourmeter: 250 });
+    const res = await inject(
+      {
+        method: 'POST',
+        url: `/api/equipment/${truck.id}/maintenances`,
+        payload: { performedAt: '2026-11-07T14:35:00-03:00', notes: 'Cambio de aceite y filtros' },
+      },
+      'OPERADOR',
+    );
+    expect(res.statusCode).toBe(201);
+    expect(res.json().maintenance).toMatchObject({
+      performedAt: '2026-11-07T17:35:00.000Z',
+      notes: 'Cambio de aceite y filtros',
+      performedBy: 'operador',
+    });
+
+    const stored = await db.maintenanceRecord.findFirstOrThrow({ where: { equipmentId: truck.id } });
+    expect(stored.performedBy).toBe('operador');
+
+    const history = await inject({ method: 'GET', url: `/api/equipment/${truck.id}/maintenances` });
+    expect(history.json()[0]).toMatchObject({ performedBy: 'operador', notes: 'Cambio de aceite y filtros' });
+  });
+
   it('accepts a reading above the hourmeter and moves the hourmeter to it', async () => {
     const truck = await createEquipment({ code: 'CAM-3', typeCode: 'CAMION', hourmeter: 240 });
     const res = await register(truck.id, { hourmeter: 255.5, performedAt: '2026-11-01T10:00:00Z' });
