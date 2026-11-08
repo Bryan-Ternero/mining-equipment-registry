@@ -1,6 +1,7 @@
 /**
- * Main screen: loads the type catalogue and the equipment, shows the summary cards, filters and search,
- * and opens the dialogs. After each change it updates that row in place instead of reloading the list.
+ * Pantalla principal: carga el catálogo de tipos y los equipos, muestra las tarjetas de resumen, los filtros
+ * y la búsqueda, y abre los diálogos. Tras cada cambio actualiza esa fila en su lugar en vez de recargar
+ * la lista.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api, ApiError, type Equipment, type EquipmentType } from '../api';
@@ -61,7 +62,7 @@ export function FleetView({ role, onDueCountChange }: FleetViewProps) {
   const dueCount = useMemo(() => equipment?.filter((e) => e.requiresMaintenance).length ?? 0, [equipment]);
   useEffect(() => onDueCountChange(dueCount), [dueCount, onDueCountChange]);
 
-  // tab filter (all / due / operating) combined with the search box (code or type name)
+  // filtro por pestaña (todos / vencidos / operando) combinado con el cuadro de búsqueda (código o nombre del tipo)
   const visible = useMemo(() => {
     const text = query.trim().toUpperCase();
     return (equipment ?? []).filter(
@@ -71,9 +72,9 @@ export function FleetView({ role, onDueCountChange }: FleetViewProps) {
     );
   }, [equipment, filter, query]);
 
-  // a save that finishes late only closes its own dialog, never one opened afterwards
+  // un guardado que termina tarde solo cierra su propio diálogo, nunca uno abierto después
   const closeIf = (opened: Dialog) => setDialog((current) => (current === opened ? null : current));
-  // the API answers every write with the updated equipment: replace that row, keep the list sorted
+  // la API responde a cada escritura con el equipo actualizado: reemplazar esa fila, mantener la lista ordenada
   const upsert = (row: Equipment) =>
     setEquipment((rows) => [...(rows ?? []).filter((r) => r.id !== row.id), row].sort(byCode));
 
@@ -228,7 +229,7 @@ export function FleetView({ role, onDueCountChange }: FleetViewProps) {
           onClose={() => setDialog(null)}
           onRegistered={(updated) => {
             upsert(updated);
-            // keep the dialog open on the refreshed equipment, unless the user already left it
+            // mantener el diálogo abierto con el equipo actualizado, salvo que el usuario ya lo haya cerrado
             setDialog((current) => (current === dialog ? { kind: 'maintenance', equipment: updated } : current));
             setNotice(`Mantenimiento de ${updated.code} registrado: ciclo reiniciado.`);
           }}

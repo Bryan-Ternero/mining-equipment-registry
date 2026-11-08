@@ -1,9 +1,9 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 
 /**
- * Stateless session tokens: base64url(JSON payload) + "." + HMAC-SHA256 signature.
- * Frontend and backend live on different origins, so the token travels as a Bearer header
- * instead of a cookie. Rotating AUTH_TOKEN_SECRET signs every session out.
+ * Tokens de sesión sin estado: base64url(payload JSON) + "." + firma HMAC-SHA256.
+ * El frontend y el backend están en orígenes distintos, así que el token viaja en un header
+ * Bearer en lugar de una cookie. Rotar AUTH_TOKEN_SECRET cierra todas las sesiones.
  */
 
 export const ROLES = ['SUPERVISOR', 'OPERADOR'] as const;
@@ -26,7 +26,7 @@ export function signToken(user: SessionUser, secret: string, now = Date.now()) {
   return { token: `${payload}.${sign(payload, secret)}`, expiresAt: new Date(exp).toISOString() };
 }
 
-/** the session user, or null for a missing, forged, malformed or expired token */
+/** el usuario de la sesión, o null si el token falta, es falso, está mal formado o venció */
 export function verifyToken(token: string, secret: string, now = Date.now()): SessionUser | null {
   const [payload, signature, extra] = token.split('.');
   if (!payload || !signature || extra !== undefined) return null;

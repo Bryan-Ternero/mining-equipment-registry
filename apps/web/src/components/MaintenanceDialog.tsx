@@ -9,7 +9,7 @@ interface MaintenanceDialogProps {
   onClose: () => void;
 }
 
-/** registers a service with its date, time and comments (restarting the cycle) and shows the history */
+/** registra un servicio con su fecha, hora y comentarios (reiniciando el ciclo) y muestra el historial */
 export function MaintenanceDialog({ equipment, onRegistered, onClose }: MaintenanceDialogProps) {
   const [history, setHistory] = useState<Maintenance[] | null>(null);
   const [historyError, setHistoryError] = useState<string | null>(null);

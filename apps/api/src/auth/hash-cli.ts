@@ -1,10 +1,10 @@
 /**
- * Prints the scrypt hash of a password for AUTH_*_PASSWORD_HASH, plus a fresh AUTH_TOKEN_SECRET.
+ * Imprime el hash scrypt de una contraseña para AUTH_*_PASSWORD_HASH, más un AUTH_TOKEN_SECRET nuevo.
  *
  *   AUTH_PASSWORD='the-password' npm --prefix apps/api run auth:hash
  *
- * The password comes from an environment variable, not an argument, so it does not end up in
- * the shell history or the process list.
+ * La contraseña llega por una variable de entorno, no por un argumento, así no queda en el
+ * historial de la shell ni en la lista de procesos.
  */
 import { randomBytes } from 'node:crypto';
 import { hashPassword } from './password.js';

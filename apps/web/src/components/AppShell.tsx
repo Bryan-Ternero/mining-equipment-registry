@@ -11,7 +11,7 @@ interface AppShellProps {
   children: ReactNode;
 }
 
-/** sidebar with the brand, navigation and the signed-in user; a compact top bar on phones */
+/** barra lateral con la marca, la navegación y el usuario conectado; una barra superior compacta en teléfonos */
 export function AppShell({ user, dueCount, onLogout, children }: AppShellProps) {
   const initial = user.username.slice(0, 1);
   return (

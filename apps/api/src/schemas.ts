@@ -1,6 +1,6 @@
 /**
- * Request validation with zod. Messages are in Spanish because the frontend shows them as they come,
- * and every invalid field is reported at once (400 with one entry per field).
+ * Validación de peticiones con zod. Los mensajes están en español porque el frontend los muestra tal
+ * como llegan, y todos los campos inválidos se informan a la vez (400 con una entrada por campo).
  */
 import { z } from 'zod';
 import { invalid } from './errors.js';
@@ -24,7 +24,7 @@ const code = z
   .max(30, 'Máximo 30 caracteres.')
   .regex(/^[A-Z0-9][A-Z0-9-]*$/, 'Solo letras, números y guiones (ej. CAM-001).');
 
-// CARGADOR is temporary (deploy test, see migration 20261108160000_add_loader_type)
+// CARGADOR es temporal (prueba de deploy, ver la migración 20261108160000_add_loader_type)
 const typeCode = z.enum(['CAMION', 'EXCAVADORA', 'PERFORADORA', 'CARGADOR'], {
   error: 'Tipo inválido: CAMION, EXCAVADORA, PERFORADORA o CARGADOR.',
 });
@@ -40,7 +40,7 @@ export const updateEquipmentSchema = createEquipmentSchema
   .refine((body) => Object.keys(body).length > 0, { message: 'Envíe al menos un campo para editar.' });
 
 export const createMaintenanceSchema = z.object({
-  /** reading at service time; defaults to the current hourmeter */
+  /** lectura al momento del mantenimiento; por defecto, el horómetro actual */
   hourmeter: hours.optional(),
   performedAt: z.iso
     .datetime({ offset: true, error: 'Fecha inválida (ISO 8601).' })
@@ -57,7 +57,7 @@ export type CreateEquipmentInput = z.infer<typeof createEquipmentSchema>;
 export type UpdateEquipmentInput = z.infer<typeof updateEquipmentSchema>;
 export type CreateMaintenanceInput = z.infer<typeof createMaintenanceSchema>;
 
-/** parses or throws a 400 with every field problem listed */
+/** valida, o lanza un 400 que lista todos los problemas de los campos */
 export function parse<T>(schema: z.ZodType<T>, value: unknown): T {
   const result = schema.safeParse(value ?? {});
   if (!result.success) {

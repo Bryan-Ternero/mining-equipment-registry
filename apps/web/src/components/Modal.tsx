@@ -7,7 +7,7 @@ interface ModalProps {
   children: ReactNode;
 }
 
-/** native <dialog>: focus trap, Escape to close and backdrop come from the browser */
+/** <dialog> nativo: el focus trap, Escape para cerrar y el fondo los aporta el navegador */
 export function Modal({ title, onClose, children }: ModalProps) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();

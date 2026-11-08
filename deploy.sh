@@ -1,32 +1,32 @@
 #!/usr/bin/env bash
 #
-# One-command deployment: ./deploy.sh   (or: npm run deploy)
+# Deploy con un solo comando: ./deploy.sh   (o: npm run deploy)
 #
-#   ./deploy.sh                deploy the current commit
-#   ./deploy.sh --allow-dirty  deploy uncommitted changes (/health still reports the HEAD commit)
-#   ./deploy.sh --allow-downgrade  deploy a commit that does not contain what production runs
-#   ./deploy.sh --help         show this help
+#   ./deploy.sh                despliega el commit actual
+#   ./deploy.sh --allow-dirty  despliega cambios sin commit (/health sigue informando el commit HEAD)
+#   ./deploy.sh --allow-downgrade  despliega un commit que no contiene lo que corre en producción
+#   ./deploy.sh --help         muestra esta ayuda
 #
-# Steps: preflight -> auth -> current state -> local build -> migrations -> publish -> verify.
-# Each step stops the run with a clear message and its own exit code:
+# Pasos: preflight -> auth -> estado actual -> build local -> migraciones -> publicación -> verificación.
+# Cada paso detiene la ejecución con un mensaje claro y su propio código de salida:
 #
-#   0  deployed and verified
-#   2  preflight: missing tool, variable or invalid argument
-#   3  Railway, Vercel or GitHub not reachable / not authenticated
-#   4  uncommitted changes in what gets published, the commit is not pushed to GitHub, or it
-#      would take production back to an older version
-#   5  local build failed (nothing was published)
-#   6  database migrations failed (nothing was published)
-#   7  API publish failed (production keeps the previous API)
-#   8  frontend publish failed (rolled back)
-#   9  post-deploy verification failed (rolled back)
-#  10  rollback did not complete: production needs manual attention
+#   0  desplegado y verificado
+#   2  preflight: falta una herramienta o una variable, o hay un argumento inválido
+#   3  Railway, Vercel o GitHub no responden o no hay sesión iniciada
+#   4  hay cambios sin commit en lo que se publica, el commit no está subido a GitHub, o
+#      llevaría producción de vuelta a una versión anterior
+#   5  falló el build local (no se publicó nada)
+#   6  fallaron las migraciones de la base de datos (no se publicó nada)
+#   7  falló la publicación de la API (producción conserva la API anterior)
+#   8  falló la publicación del frontend (se hizo rollback)
+#   9  falló la verificación posterior al deploy (se hizo rollback)
+#  10  el rollback no terminó: producción necesita atención manual
 #
-# Safe to run again: migrations only apply what is pending, and publishing the same commit
-# replaces the previous deployment instead of duplicating anything.
+# Se puede volver a ejecutar sin riesgo: las migraciones solo aplican lo pendiente, y publicar el
+# mismo commit reemplaza el deployment anterior en lugar de duplicar algo.
 #
-# Rollback rehearsal: DEPLOY_SIMULATE_FAILURE=verify ./deploy.sh publishes for real, forces the
-# final verification to fail and runs the real rollback.
+# Ensayo de rollback: DEPLOY_SIMULATE_FAILURE=verify ./deploy.sh publica de verdad, fuerza que la
+# verificación final falle y ejecuta el rollback real.
 set -Eeuo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -66,14 +66,14 @@ cleanup() {
   if [ -d "$ROLLBACK_TREE" ]; then
     git worktree remove --force "$ROLLBACK_TREE" >/dev/null 2>&1 || true
   fi
-  # any failure that did not go through fail() still ends with a readable message
+  # cualquier fallo que no pasó por fail() igual termina con un mensaje legible
   if [ "$code" -ne 0 ] && [ "$REPORTED" -eq 0 ]; then
     printf '\n\033[31mFAILED\033[0m  unexpected error (exit code %s), see the output above.\n' "$code" >&2
   fi
 }
 trap cleanup EXIT
 
-# prints one field of a JSON document (dot path); prints nothing when it is absent or invalid
+# imprime un campo de un documento JSON (ruta con puntos); no imprime nada si falta o es inválido
 json_field() {
   node -e '
 const [doc, path] = process.argv.slice(1);
@@ -87,11 +87,11 @@ try {
 # ---------------------------------------------------------------------------
 step "1/7 Preflight: tools and environment variables"
 
-# values already exported in the shell win over .env, so CI can inject secrets
+# los valores ya exportados en la shell tienen prioridad sobre .env, así CI puede inyectar secretos
 if [ -f .env ]; then
   while IFS='=' read -r key value; do
     [[ "$key" =~ ^[A-Z_][A-Z0-9_]*$ ]] || continue
-    # strip one pair of surrounding quotes: KEY="value" and KEY='value' mean value
+    # quita un par de comillas envolventes: KEY="value" y KEY='value' significan value
     if [[ "$value" =~ ^\"(.*)\"$ || "$value" =~ ^\'(.*)\'$ ]]; then value="${BASH_REMATCH[1]}"; fi
     [ -n "${!key:-}" ] || export "$key=$value"
   done < <(grep -E '^[A-Z_][A-Z0-9_]*=' .env | sed 's/\r$//')
@@ -105,7 +105,7 @@ DB_SERVICE="${RAILWAY_DB_SERVICE:-Postgres}"
 RAILWAY_ENV="${RAILWAY_ENV:-production}"
 SIMULATE="${DEPLOY_SIMULATE_FAILURE:-}"
 
-# collect every missing precondition first, so a single run lists all of them
+# reúne primero todas las precondiciones faltantes, así una sola ejecución las lista todas
 problems=()
 for name in PUBLIC_API_URL PUBLIC_WEB_URL RAILWAY_PROJECT_ID VERCEL_PROJECT_NAME; do
   [ -n "${!name:-}" ] || problems+=("variable $name")
@@ -143,7 +143,7 @@ ok "Vercel: $(vercel whoami 2>/dev/null | tail -n1)"
 (cd apps/web && vercel link --yes --project "$VERCEL_PROJECT_NAME" >/dev/null 2>&1) ||
   fail "Could not link the Vercel project '$VERCEL_PROJECT_NAME'. Check the name in .env." 3
 
-# the API refuses to start without its login accounts: check them before building anything
+# la API se niega a arrancar sin sus cuentas de login: se revisan antes de compilar nada
 API_VARS="$(railway variable list --service "$API_SERVICE" "${RAILWAY_SCOPE[@]}" --json 2>/dev/null)" ||
   fail "Could not read the variables of the '$API_SERVICE' service in Railway." 3
 missing_auth=()
@@ -162,7 +162,7 @@ ok "login accounts configured in Railway"
 step "3/7 Version and current production state"
 
 VERSION="$(git rev-parse --short HEAD)"
-# only what gets published has to match the commit
+# solo lo que se publica tiene que coincidir con el commit
 if [ -n "$(git status --porcelain -- apps scripts deploy.sh)" ]; then
   if [ "$ALLOW_DIRTY" -eq 0 ]; then
     fail "There are uncommitted changes in apps/, scripts/ or deploy.sh: what gets published would not be $VERSION.
@@ -171,7 +171,7 @@ if [ -n "$(git status --porcelain -- apps scripts deploy.sh)" ]; then
   warn "dirty tree: publishing the current files, /health will report $VERSION"
 fi
 
-# what goes live must also be on GitHub, so the repository always shows what production runs
+# lo que sale a producción también debe estar en GitHub, así el repositorio siempre muestra lo que corre en producción
 git fetch --quiet origin 2>/dev/null ||
   fail "Could not reach GitHub (git fetch origin) to check that $VERSION is pushed. Check the connection and retry." 3
 if [ -z "$(git branch --remotes --contains HEAD 2>/dev/null)" ]; then
@@ -180,7 +180,7 @@ if [ -z "$(git branch --remotes --contains HEAD 2>/dev/null)" ]; then
 fi
 ok "version to publish: $VERSION (pushed to GitHub)"
 
-# what is live right now is the rollback target; an unreachable service just has none
+# lo que está en producción ahora es el destino del rollback; un servicio inaccesible simplemente no tiene
 PREV_API_VERSION="$(json_field "$(curl -fsS -m 15 "$PUBLIC_API_URL/health" 2>/dev/null || true)" version)"
 PREV_WEB_DEPLOYMENT="$(json_field "$(cd apps/web && vercel inspect "${PUBLIC_WEB_URL#https://}" --json 2>/dev/null || true)" url)"
 
@@ -196,13 +196,14 @@ else
   warn "no current frontend deployment found: no frontend rollback available (first deploy?)"
 fi
 
-# never take production backwards by accident: migrations are forward-only, so publishing code
-# older than what is live leaves the database ahead of the code (for example, data of a type the
-# old frontend cannot draw). Same commit and descendants pass; the rollback uses its own path.
+# nunca llevar producción hacia atrás por accidente: las migraciones solo avanzan, así que publicar
+# código más antiguo que el que está en producción deja la base de datos por delante del código (por
+# ejemplo, datos de un tipo que el frontend viejo no sabe dibujar). El mismo commit y sus
+# descendientes pasan; el rollback usa su propio camino.
 ancestor=0
 if [ -n "$PREV_API_VERSION" ]; then
-  # 0: production is part of this history; 1: it is not (downgrade); anything else: git could
-  # not compare them (shallow clone, missing objects). Unverifiable is refused too: fail closed.
+  # 0: producción es parte de este historial; 1: no lo es (downgrade); cualquier otro valor: git no
+  # pudo compararlos (clon superficial, objetos faltantes). Lo no verificable también se rechaza: fail closed.
   git merge-base --is-ancestor "$PREV_API_VERSION" HEAD || ancestor=$?
 fi
 if [ "$ancestor" -gt 1 ] && [ "$ALLOW_DOWNGRADE" -eq 0 ]; then
@@ -238,8 +239,8 @@ step "5/7 Database migrations"
 
 DB_VARS="$(railway variable list --service "$DB_SERVICE" "${RAILWAY_SCOPE[@]}" --json 2>/dev/null)" ||
   fail "Could not read the variables of the '$DB_SERVICE' service in Railway." 6
-# the public URL goes through Railway's TCP proxy; older templates only expose its parts
-# shellcheck disable=SC2016 # ${...} below is a JavaScript template literal, not bash
+# la URL pública pasa por el proxy TCP de Railway; las plantillas antiguas solo exponen sus partes
+# shellcheck disable=SC2016 # el ${...} de abajo es un template literal de JavaScript, no bash
 DB_URL="$(node -e '
 const v = JSON.parse(process.argv[1]);
 if (v.DATABASE_PUBLIC_URL) process.stdout.write(v.DATABASE_PUBLIC_URL);
@@ -257,11 +258,11 @@ else if (v.RAILWAY_TCP_PROXY_DOMAIN && v.RAILWAY_TCP_PROXY_PORT && v.PGUSER && v
 ok "migrations applied (only pending ones run, so this is safe to repeat)"
 
 # ---------------------------------------------------------------------------
-# publish helpers
+# funciones auxiliares de publicación
 
 RAILWAY_STATUS=""
 
-# waits until one Railway deployment (by id) finishes; returns 0 on SUCCESS
+# espera a que termine un deployment de Railway (por id); devuelve 0 si es SUCCESS
 wait_railway() {
   local id="$1" deadline=$((SECONDS + 600)) list status
   while :; do
@@ -287,7 +288,7 @@ try {
   done
 }
 
-# publishes an apps/api directory as the given version and waits until Railway reports SUCCESS
+# publica un directorio apps/api como la versión indicada y espera hasta que Railway informe SUCCESS
 publish_api() {
   local dir="$1" version="$2" out id
   railway variable set "APP_VERSION=$version" "WEB_ORIGIN=$PUBLIC_WEB_URL" \
@@ -307,7 +308,7 @@ verify() {
 API_PUBLISHED=0
 WEB_PROMOTED=0
 
-# restores the previous API commit and frontend deployment, then verifies the restored state
+# restaura el commit anterior de la API y el deployment anterior del frontend, y luego verifica el estado restaurado
 rollback() {
   local reason="$1" code="$2" restored=1
   step "Rollback"
@@ -337,7 +338,7 @@ rollback() {
 
   if [ "$restored" -eq 1 ] && [ -n "$PREV_API_VERSION" ]; then
     printf '    verifying the restored state\n'
-    # the restored version may predate the login, so its check is skipped here
+    # la versión restaurada puede ser anterior al login, así que aquí se omite su verificación
     verify "$PUBLIC_WEB_URL" "$PREV_API_VERSION" all 6 0 || restored=0
   fi
 
@@ -353,8 +354,8 @@ rollback() {
 step "6/7 Publish"
 
 if ! publish_api apps/api "$VERSION"; then
-  # Railway keeps serving the previous deployment when a new one fails: production is intact,
-  # only the version variable has to go back for the next restart
+  # Railway sigue sirviendo el deployment anterior cuando uno nuevo falla: producción está intacta,
+  # solo la variable de versión tiene que volver atrás para el próximo reinicio
   if [ -n "$PREV_API_VERSION" ]; then
     railway variable set "APP_VERSION=$PREV_API_VERSION" --service "$API_SERVICE" "${RAILWAY_SCOPE[@]}" \
       --skip-deploys >/dev/null 2>&1 || true
@@ -365,10 +366,10 @@ fi
 API_PUBLISHED=1
 ok "API: deployment SUCCESS"
 
-# the frontend goes up without its public domain, is checked, and only then promoted
+# el frontend se sube sin su dominio público, se verifica y solo entonces se promueve
 WEB_OUT="$(cd apps/web && vercel deploy --prod --skip-domain --yes --json \
   --build-env "VITE_API_URL=$PUBLIC_API_URL" 2>/dev/null)" || WEB_OUT=""
-# shellcheck disable=SC2016 # ${...} below is a JavaScript template literal, not bash
+# shellcheck disable=SC2016 # el ${...} de abajo es un template literal de JavaScript, no bash
 WEB_CANDIDATE="$(node -e '
 const out = process.argv[1];
 let url = "";
@@ -388,8 +389,8 @@ verify "$WEB_CANDIDATE" "$VERSION" web 3 || candidate_code=$?
 case "$candidate_code" in
   0) ok "web: candidate verified" ;;
   3)
-    # Vercel Deployment Protection puts a login in front of preview URLs: it can only be
-    # checked once it is on the public domain, where the final verification still guards it
+    # Vercel Deployment Protection pone un login delante de las URL de preview: solo se puede
+    # verificar una vez que está en el dominio público, donde la verificación final lo sigue protegiendo
     warn "web: the candidate is behind Vercel Deployment Protection, it is verified after promotion"
     ;;
   *) rollback "The frontend candidate failed verification: it was not promoted." 8 ;;

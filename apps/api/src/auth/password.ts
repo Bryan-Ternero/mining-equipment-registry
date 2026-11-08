@@ -1,10 +1,10 @@
 import { randomBytes, scrypt, timingSafeEqual, type ScryptOptions } from 'node:crypto';
 
 /**
- * Password hashing with scrypt (built into Node, memory-hard).
- * Stored format is self-describing: scrypt:N:r:p:salt:hash (salt and hash in base64url),
- * so the cost can be raised later without breaking existing hashes. The separator is ":" and
- * not "$" because dotenv expands "$NAME" inside .env values and would corrupt the hash.
+ * Hash de contraseñas con scrypt (incluido en Node, de alto consumo de memoria).
+ * El formato guardado se describe a sí mismo: scrypt:N:r:p:salt:hash (salt y hash en base64url),
+ * así el costo se puede aumentar más adelante sin romper los hashes existentes. El separador es ":"
+ * y no "$" porque dotenv expande "$NAME" dentro de los valores de .env y corrompería el hash.
  */
 
 const N = 16384;
@@ -24,7 +24,7 @@ export async function hashPassword(password: string): Promise<string> {
   return ['scrypt', N, R, P, salt.toString('base64url'), key.toString('base64url')].join(':');
 }
 
-/** true only for the right password; a malformed hash is a "no", never an exception */
+/** true solo para la contraseña correcta; un hash mal formado es un "no", nunca una excepción */
 export async function verifyPassword(password: string, stored: string): Promise<boolean> {
   const parts = stored.split(':');
   if (parts.length !== 6 || parts[0] !== 'scrypt') return false;

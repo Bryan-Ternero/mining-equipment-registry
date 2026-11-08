@@ -1,6 +1,6 @@
 /**
- * Entry point: mounts the app inside the error boundary, so a render error shows a recovery screen
- * instead of a blank page.
+ * Punto de entrada: monta la app dentro del error boundary, para que un error de renderizado muestre una
+ * pantalla de recuperación en lugar de una página en blanco.
  */
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';

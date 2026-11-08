@@ -2,8 +2,8 @@ import type { PrismaClient } from '@prisma/client';
 import type { FastifyPluginAsync } from 'fastify';
 
 /**
- * GET /health: 200 when the service and its database answer, 503 otherwise.
- * `version` is the deployed commit, so the deploy can prove which build is live.
+ * GET /health: 200 cuando el servicio y su base de datos responden, 503 en caso contrario.
+ * `version` es el commit desplegado, así el deploy puede demostrar qué build está en producción.
  */
 export const healthRoutes: FastifyPluginAsync<{ db: PrismaClient; version: string }> = async (app, { db, version }) => {
   app.get('/health', async (_request, reply) => {

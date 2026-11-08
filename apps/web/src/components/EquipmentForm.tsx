@@ -1,6 +1,6 @@
 /**
- * Create and edit dialog. It validates in the browser for instant feedback, shows the API errors next
- * to each field, and for the operator locks code and type so only the hourmeter can change.
+ * Diálogo de creación y edición. Valida en el navegador para dar respuesta inmediata, muestra los errores
+ * de la API junto a cada campo y, para el operador, bloquea código y tipo para que solo cambie el horómetro.
  */
 import { useState, type FormEvent } from 'react';
 import { ApiError, type Equipment, type EquipmentInput, type EquipmentType } from '../api';
@@ -11,7 +11,7 @@ import { Modal } from './Modal';
 interface EquipmentFormProps {
   types: EquipmentType[];
   role: Role;
-  /** equipment to edit; undefined to create a new one */
+  /** equipo a editar; undefined para crear uno nuevo */
   equipment?: Equipment;
   onSubmit: (input: Partial<EquipmentInput>) => Promise<void>;
   onClose: () => void;
@@ -29,7 +29,7 @@ export function EquipmentForm({ types, role, equipment, onSubmit, onClose }: Equ
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  // the operator only updates the hourmeter: code and type are the identity of the equipment
+  // el operador solo actualiza el horómetro: código y tipo son la identidad del equipo
   const identityLocked = !can(role, 'editIdentity');
   const minHours = equipment?.lastServiceHours ?? 0;
 

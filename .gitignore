@@ -3,28 +3,28 @@ dist/
 coverage/
 *.log
 
-# environment: only .env.example is committed
+# entorno: solo se hace commit de .env.example
 .env
 .env.*
 !.env.example
 
-# deploy scratch and provider link state
+# archivos temporales del deploy y estado de vinculación con los proveedores
 .deploy/
 .vercel/
 .railway/
 
-# editor / OS
+# editor / sistema operativo
 .vscode/
 .idea/
 .DS_Store
 Thumbs.db
 
-# local reference copy of another project, not part of this repo
+# copia local de referencia de otro proyecto, no forma parte de este repositorio
 miners-fullstack-challenge-main/
 
-# gentle-ai skill registry: generated per machine, contains local paths
+# registro de skills de gentle-ai: se genera por máquina y contiene rutas locales
 .atl/
 
-# written and rewritten by `vercel link` on every deploy; the root rules above already cover
-# .vercel and .env*, so tracking it would leave the published tree dirty (deploy exit 4)
+# lo escribe y reescribe `vercel link` en cada deploy; las reglas de la raíz de arriba ya cubren
+# .vercel y .env*, así que versionarlo dejaría sucio el árbol publicado (deploy exit 4)
 apps/web/.gitignore

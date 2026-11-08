@@ -1,11 +1,11 @@
 import type { Session } from './auth/session';
 
-// CARGADOR is temporary (deploy test)
+// CARGADOR es temporal (prueba de deploy)
 export type TypeCode = 'CAMION' | 'EXCAVADORA' | 'PERFORADORA' | 'CARGADOR';
 
 /**
- * A type code as the API sends it. The catalogue lives in the database and can be ahead of this
- * build, so it is a plain string: never assume it is one of the TypeCode values above.
+ * Un código de tipo tal como lo envía la API. El catálogo vive en la base de datos y puede ir por
+ * delante de este build, así que es un string simple: nunca asumas que es uno de los valores de TypeCode de arriba.
  */
 export type ApiTypeCode = string;
 
@@ -36,7 +36,7 @@ export interface Maintenance {
   hourmeter: number;
   performedAt: string;
   notes: string | null;
-  /** username that registered it; null for records older than the login */
+  /** usuario que lo registró; null para registros anteriores al login */
   performedBy: string | null;
   createdAt: string;
 }
@@ -58,7 +58,7 @@ export interface FieldError {
   message: string;
 }
 
-/** error returned by the API, with its stable code and per-field details */
+/** error devuelto por la API, con su código estable y detalles por campo */
 export class ApiError extends Error {
   constructor(
     readonly status: number,
@@ -72,7 +72,7 @@ export class ApiError extends Error {
 
 const BASE_URL = (import.meta.env.VITE_API_URL ?? 'http://localhost:3001').replace(/\/$/, '');
 
-// session wiring, set by the app: where the token comes from and what to do when it is rejected
+// conexión con la sesión, la define la app: de dónde sale el token y qué hacer cuando es rechazado
 let currentToken: () => string | null = () => null;
 let onUnauthorized: () => void = () => {};
 
@@ -96,7 +96,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   if (res.status === 204) return undefined as T;
 
   const body = await res.json().catch(() => null);
-  // an expired or revoked session anywhere but the login form sends the user back to log in
+  // una sesión expirada o revocada en cualquier lugar salvo el formulario de login devuelve al usuario al login
   if (res.status === 401 && token) onUnauthorized();
   if (!res.ok) {
     const error = body?.error;

@@ -1,8 +1,8 @@
 import { execSync } from 'node:child_process';
 
 /**
- * Brings the test database up to date with the migrations, the same command production runs.
- * It is non-destructive: each test removes its own rows (see helpers.ts).
+ * Pone al día la base de datos de tests con las migraciones, el mismo comando que ejecuta producción.
+ * No es destructivo: cada test elimina sus propias filas (ver helpers.ts).
  */
 export default function setup() {
   execSync('npx prisma migrate deploy', {

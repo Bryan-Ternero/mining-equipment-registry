@@ -5,7 +5,7 @@ import { AppShell } from './components/AppShell';
 import { FleetView } from './components/FleetView';
 import { LoginScreen } from './components/LoginScreen';
 
-/** session gate: the login until there is a valid session, then the system for that role */
+/** control de sesión: el login hasta que haya una sesión válida, luego el sistema para ese rol */
 export function App() {
   const [session, setSession] = useState<Session | null>(loadSession);
   const [notice, setNotice] = useState<string | null>(null);
@@ -19,8 +19,8 @@ export function App() {
     setNotice(reason ?? null);
   }, []);
 
-  // a layout effect runs before any child's useEffect: on a page reload with a stored session,
-  // the fleet's first request must already carry the token
+  // un layout effect se ejecuta antes que el useEffect de cualquier hijo: al recargar la página con una sesión
+  // guardada, la primera petición de la flota ya debe llevar el token
   useLayoutEffect(() => {
     configureAuth({
       token: () => sessionRef.current?.token ?? null,
@@ -28,11 +28,11 @@ export function App() {
     });
   }, [logout]);
 
-  // the token carries its expiry: sign out on time instead of waiting for a rejected request
+  // el token lleva su vencimiento: cerrar sesión a tiempo en lugar de esperar una petición rechazada
   useEffect(() => {
     if (!session) return;
     const ms = new Date(session.expiresAt).getTime() - Date.now();
-    // setTimeout fires at once beyond 2^31-1 ms (~24.8 days): cap it
+    // setTimeout se dispara de inmediato por encima de 2^31-1 ms (~24,8 días): se limita
     const delay = Math.min(Math.max(0, ms), 2 ** 31 - 1);
     const timer = setTimeout(() => logout('Su sesión expiró. Ingrese nuevamente.'), delay);
     return () => clearTimeout(timer);

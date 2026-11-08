@@ -1,7 +1,7 @@
 import type { SVGProps } from 'react';
 import type { TypeCode } from '../api';
 
-/** small inline icon set (24px grid, stroke icons) so the app ships no icon font */
+/** pequeño conjunto de iconos en línea (cuadrícula de 24px, iconos de trazo) para no incluir una fuente de iconos */
 function Icon({ children, size = 18, ...props }: SVGProps<SVGSVGElement> & { size?: number }) {
   return (
     <svg
@@ -55,7 +55,7 @@ export const LoaderIcon = (p: P) => (
   </Icon>
 );
 
-/** shown for a type this build does not know yet (for example, one added by a newer migration) */
+/** se muestra para un tipo que este build aún no conoce (por ejemplo, uno agregado por una migración más reciente) */
 export const GenericEquipmentIcon = (p: P) => (
   <Icon {...p}>
     <rect x="4" y="7" width="16" height="10" rx="2" />
@@ -73,8 +73,9 @@ export const typeIcon: Record<TypeCode, (p: P) => React.JSX.Element> = {
 };
 
 /**
- * Icon for any type code coming from the API. The database can be ahead of this bundle, so an
- * unknown code must render a generic icon instead of an undefined component (which crashes React).
+ * Icono para cualquier código de tipo que llegue de la API. La base de datos puede ir por delante de este
+ * bundle, así que un código desconocido debe mostrar un icono genérico en lugar de un componente undefined
+ * (que rompe React).
  */
 export function iconFor(code: string): (p: P) => React.JSX.Element {
   return Object.hasOwn(typeIcon, code) ? typeIcon[code as TypeCode] : GenericEquipmentIcon;
@@ -160,7 +161,7 @@ export const CloseIcon = (p: P) => (
   </Icon>
 );
 
-/** brand mark: a stylized haul truck */
+/** marca: un camión minero estilizado */
 export const BrandMark = () => (
   <span className="brand-mark">
     <TruckIcon size={20} />

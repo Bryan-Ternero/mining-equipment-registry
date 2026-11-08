@@ -1,6 +1,6 @@
 /**
- * Equipment table: one row per equipment with its current cycle, its status and the actions the role
- * allows. On phones the CSS turns each row into a card.
+ * Tabla de equipos: una fila por equipo con su ciclo actual, su estado y las acciones que el rol
+ * permite. En teléfonos el CSS convierte cada fila en una tarjeta.
  */
 import type { Equipment } from '../api';
 import { can, type Role } from '../auth/permissions';
@@ -36,7 +36,8 @@ export function EquipmentTable({ equipment, role, onEdit, onMaintenance, onDelet
           {equipment.map((e) => {
             const progress = cycleProgress(e);
             const Icon = iconFor(e.typeCode);
-            // bar colour: red when due, amber from 80% of the interval (service coming up), green otherwise
+            // color de la barra: rojo cuando está vencido, ámbar desde el 80% del intervalo (servicio
+            // próximo), verde en otro caso
             const level = e.requiresMaintenance ? 'due' : progress >= 80 ? 'warn' : '';
             return (
               <tr key={e.id}>

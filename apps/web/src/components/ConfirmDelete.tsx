@@ -1,5 +1,5 @@
 /**
- * Confirmation before deleting an equipment: the history goes with it and it cannot be undone.
+ * Confirmación antes de eliminar un equipo: su historial se elimina con él y no se puede deshacer.
  */
 import { useState } from 'react';
 import { ApiError, type Equipment } from '../api';

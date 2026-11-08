@@ -1,5 +1,5 @@
 /**
- * Session helpers for route handlers: read the Bearer token and enforce the role a route requires.
+ * Funciones de sesión para los handlers de rutas: leen el token Bearer y exigen el rol que requiere una ruta.
  */
 import type { FastifyRequest } from 'fastify';
 import { forbidden, unauthorized } from '../errors.js';
@@ -11,7 +11,7 @@ declare module 'fastify' {
   }
 }
 
-/** reads the Bearer token; null when absent or invalid */
+/** lee el token Bearer; null si falta o es inválido */
 export function sessionFrom(request: FastifyRequest, secret: string): SessionUser | null {
   const header = request.headers.authorization ?? '';
   const [scheme, token] = header.split(' ');

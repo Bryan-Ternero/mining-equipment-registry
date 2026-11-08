@@ -1,6 +1,6 @@
 /**
- * Process entry point: loads the configuration, starts listening and closes the server and the
- * database connection cleanly on SIGTERM, which Railway sends on every redeploy.
+ * Punto de entrada del proceso: carga la configuración, empieza a escuchar y cierra limpiamente el
+ * servidor y la conexión a la base de datos ante SIGTERM, que Railway envía en cada redeploy.
  */
 import { PrismaClient } from '@prisma/client';
 import { buildApp } from './app.js';
