@@ -1,5 +1,7 @@
 # Local container for the API (docker compose --profile full).
 # Named Dockerfile.local on purpose: a plain Dockerfile would switch the Railway production build.
+
+# build keeps the dev dependencies: the compose "migrate" service runs the Prisma CLI from here
 FROM node:24-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
@@ -7,12 +9,15 @@ RUN npm ci --no-audit --no-fund
 COPY prisma ./prisma
 COPY tsconfig.json tsconfig.build.json ./
 COPY src ./src
-RUN npm run build && npm prune --omit=dev
+RUN npm run build
+
+FROM build AS prod-deps
+RUN npm prune --omit=dev
 
 FROM node:24-alpine
 WORKDIR /app
 ENV NODE_ENV=production
-COPY --from=build /app/node_modules ./node_modules
+COPY --from=prod-deps /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/prisma ./prisma
 COPY package.json ./
