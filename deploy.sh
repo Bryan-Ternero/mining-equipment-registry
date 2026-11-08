@@ -11,8 +11,8 @@
 #
 #   0  deployed and verified
 #   2  preflight: missing tool, variable or invalid argument
-#   3  Railway or Vercel not authenticated / project not reachable
-#   4  uncommitted changes in what gets published
+#   3  Railway, Vercel or GitHub not reachable / not authenticated
+#   4  uncommitted changes in what gets published, or the commit is not pushed to GitHub
 #   5  local build failed (nothing was published)
 #   6  database migrations failed (nothing was published)
 #   7  API publish failed (production keeps the previous API)
@@ -166,7 +166,15 @@ if [ -n "$(git status --porcelain -- apps scripts deploy.sh)" ]; then
   fi
   warn "dirty tree: publishing the current files, /health will report $VERSION"
 fi
-ok "version to publish: $VERSION"
+
+# what goes live must also be on GitHub, so the repository always shows what production runs
+git fetch --quiet origin 2>/dev/null ||
+  fail "Could not reach GitHub (git fetch origin) to check that $VERSION is pushed. Check the connection and retry." 3
+if [ -z "$(git branch --remotes --contains HEAD 2>/dev/null)" ]; then
+  fail "Commit $VERSION is not on GitHub yet: production would run code the repository does not have.
+       Push it first (git push), then run ./deploy.sh again." 4
+fi
+ok "version to publish: $VERSION (pushed to GitHub)"
 
 # what is live right now is the rollback target; an unreachable service just has none
 PREV_API_VERSION="$(json_field "$(curl -fsS -m 15 "$PUBLIC_API_URL/health" 2>/dev/null || true)" version)"

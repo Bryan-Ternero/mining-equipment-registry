@@ -100,6 +100,35 @@ jobs:
           set +e
           ./deploy.sh --nope
           test "$?" -eq 2
+      - name: Refuses to deploy a commit that is not on GitHub (exit 4)
+        run: |
+          # fake provider CLIs: they answer the read-only checks and refuse anything that publishes
+          mkdir -p "$RUNNER_TEMP/stubs"
+          cat > "$RUNNER_TEMP/stubs/railway" <<'EOF'
+          #!/usr/bin/env bash
+          case "$1" in
+            whoami) echo "Logged in as ci" ;;
+            variable) echo '{"AUTH_TOKEN_SECRET":"x","AUTH_SUPERVISOR_USERNAME":"s","AUTH_SUPERVISOR_PASSWORD_HASH":"scrypt:x","AUTH_OPERATOR_USERNAME":"o","AUTH_OPERATOR_PASSWORD_HASH":"scrypt:y"}' ;;
+            *) echo "stub railway refuses: $*" >&2; exit 97 ;;
+          esac
+          EOF
+          cat > "$RUNNER_TEMP/stubs/vercel" <<'EOF'
+          #!/usr/bin/env bash
+          case "$1" in
+            whoami) echo ci ;;
+            link) exit 0 ;;
+            *) echo "stub vercel refuses: $*" >&2; exit 97 ;;
+          esac
+          EOF
+          chmod +x "$RUNNER_TEMP/stubs/railway" "$RUNNER_TEMP/stubs/vercel"
+          git -c user.name=ci -c user.email=ci@example.com commit --allow-empty -qm "ci: local commit that is not pushed"
+          set +e
+          PATH="$RUNNER_TEMP/stubs:$PATH" PUBLIC_API_URL=https://api.example.com PUBLIC_WEB_URL=https://web.example.com \
+            RAILWAY_PROJECT_ID=ci VERCEL_PROJECT_NAME=ci ./deploy.sh > out.txt 2>&1
+          code=$?
+          cat out.txt
+          test "$code" -eq 4 || exit 1
+          grep -q "is not on GitHub yet" out.txt
       - name: Verifier refuses an invalid retry count
         run: |
           set +e
