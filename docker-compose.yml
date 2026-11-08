@@ -1,5 +1,10 @@
-# Local PostgreSQL for development and integration tests.
-# Published on 5433 so it does not clash with a native PostgreSQL on 5432.
+# Local environment.
+#
+#   docker compose up -d db                  PostgreSQL only (development and integration tests)
+#   docker compose --profile full up --build full stack: db -> migrations -> API -> web
+#
+# PostgreSQL is published on 5433 so it does not clash with a native PostgreSQL on 5432.
+# These images are for local use only: production builds on Railway (API) and Vercel (web).
 services:
   db:
     image: postgres:18-alpine
@@ -16,6 +21,54 @@ services:
       interval: 3s
       timeout: 3s
       retries: 20
+
+  # applies pending migrations once and exits; the API waits for it to succeed
+  migrate:
+    profiles: [full]
+    build:
+      context: apps/api
+      dockerfile: Dockerfile.local
+      target: build
+    command: ["npx", "prisma", "migrate", "deploy"]
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/equipment?schema=public
+    depends_on:
+      db:
+        condition: service_healthy
+
+  api:
+    profiles: [full]
+    build:
+      context: apps/api
+      dockerfile: Dockerfile.local
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/equipment?schema=public
+      PORT: "3001"
+      WEB_ORIGIN: http://localhost:8080
+      APP_VERSION: docker
+    ports:
+      - "8081:3001"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3001/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  web:
+    profiles: [full]
+    build:
+      context: apps/web
+      dockerfile: Dockerfile.local
+      args:
+        VITE_API_URL: http://localhost:8081
+    ports:
+      - "8080:80"
+    depends_on:
+      api:
+        condition: service_healthy
 
 volumes:
   db-data:
