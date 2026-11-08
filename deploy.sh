@@ -186,6 +186,7 @@ step "5/7 Database migrations"
 DB_VARS="$(railway variable list --service "$DB_SERVICE" "${RAILWAY_SCOPE[@]}" --json 2>/dev/null)" ||
   fail "Could not read the variables of the '$DB_SERVICE' service in Railway." 6
 # the public URL goes through Railway's TCP proxy; older templates only expose its parts
+# shellcheck disable=SC2016 # ${...} below is a JavaScript template literal, not bash
 DB_URL="$(node -e '
 const v = JSON.parse(process.argv[1]);
 if (v.DATABASE_PUBLIC_URL) process.stdout.write(v.DATABASE_PUBLIC_URL);
@@ -313,6 +314,7 @@ ok "API: deployment SUCCESS"
 # the frontend goes up without its public domain, is checked, and only then promoted
 WEB_OUT="$(cd apps/web && vercel deploy --prod --skip-domain --yes --json \
   --build-env "VITE_API_URL=$PUBLIC_API_URL" 2>/dev/null)" || WEB_OUT=""
+# shellcheck disable=SC2016 # ${...} below is a JavaScript template literal, not bash
 WEB_CANDIDATE="$(node -e '
 const out = process.argv[1];
 let url = "";
