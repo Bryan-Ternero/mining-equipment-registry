@@ -14,7 +14,8 @@
     "test": "vitest run tests/unit",
     "test:int": "dotenv-cli -e ../../.env -- vitest run --config vitest.integration.config.ts",
     "lint": "eslint src tests",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "auth:hash": "tsx src/auth/hash-cli.ts"
   },
   "dependencies": {
     "@fastify/cors": "^11.4.1",

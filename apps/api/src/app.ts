@@ -1,8 +1,10 @@
 import cors from '@fastify/cors';
 import type { PrismaClient } from '@prisma/client';
 import Fastify, { type FastifyInstance } from 'fastify';
+import { sessionFrom } from './auth/guard.js';
 import type { Config } from './config.js';
-import { AppError } from './errors.js';
+import { AppError, unauthorized } from './errors.js';
+import { authRoutes } from './routes/auth.js';
 import { equipmentRoutes } from './routes/equipment.js';
 import { healthRoutes } from './routes/health.js';
 import { EquipmentService } from './services/equipment-service.js';
@@ -13,17 +15,32 @@ export interface AppDeps {
   logger?: boolean;
 }
 
+/** routes reachable without a session; everything else under /api needs one */
+const PUBLIC_API_ROUTES = new Set(['POST /api/auth/login']);
+
 export function buildApp({ config, db, logger = false }: AppDeps): FastifyInstance {
-  const app = Fastify({ logger });
+  // behind Railway's proxy: request.ip must be the client, not the proxy (login throttling)
+  const app = Fastify({ logger, trustProxy: true });
 
   app.register(cors, {
     origin: config.webOrigins,
     methods: ['GET', 'POST', 'PATCH', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  });
+
+  app.decorateRequest('user', null);
+  app.addHook('onRequest', async (request) => {
+    request.user = sessionFrom(request, config.auth.tokenSecret);
+    const path = request.url.split('?')[0] ?? '';
+    if (request.method === 'OPTIONS' || !path.startsWith('/api/')) return;
+    if (!request.user && !PUBLIC_API_ROUTES.has(`${request.method} ${path}`)) throw unauthorized();
   });
 
   // one error shape for every failure: { error: { code, message, details? } }
   app.setErrorHandler((error, request, reply) => {
     if (error instanceof AppError) {
+      const retry = (error.details as { retryAfterSeconds?: number } | undefined)?.retryAfterSeconds;
+      if (error.status === 429 && retry) reply.header('Retry-After', String(retry));
       return reply.status(error.status).send({
         error: { code: error.code, message: error.message, details: error.details },
       });
@@ -42,6 +59,7 @@ export function buildApp({ config, db, logger = false }: AppDeps): FastifyInstan
   );
 
   app.register(healthRoutes, { db, version: config.version });
+  app.register(authRoutes, { prefix: '/api', auth: config.auth });
   app.register(equipmentRoutes, { prefix: '/api', service: new EquipmentService(db) });
 
   return app;
