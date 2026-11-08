@@ -47,7 +47,8 @@ services:
       WEB_ORIGIN: http://localhost:8080
       APP_VERSION: docker
       # login accounts come from .env (never from the repository); see README "Cuentas de login".
-      # Empty when missing, so "docker compose up db" still works: the API then refuses to start.
+      # Empty when missing, so "docker compose up db" still works: the API then refuses to
+      # start and its log lists the missing variables.
       AUTH_TOKEN_SECRET: ${AUTH_TOKEN_SECRET:-}
       AUTH_SUPERVISOR_USERNAME: ${AUTH_SUPERVISOR_USERNAME:-}
       AUTH_SUPERVISOR_PASSWORD_HASH: ${AUTH_SUPERVISOR_PASSWORD_HASH:-}

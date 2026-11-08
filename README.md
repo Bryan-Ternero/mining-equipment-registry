@@ -107,7 +107,7 @@ odd/           Plan, especificación y bitácora del desarrollo
 Requisitos: Node 20 o superior y Docker.
 
 ```bash
-cp .env.example .env                 # valores locales ya listos para Docker
+cp .env.example .env                 # luego complete las cuentas AUTH_* (ver Cuentas de login)
 docker compose up -d db              # PostgreSQL en localhost:5433
 docker compose exec db psql -U postgres -c "CREATE DATABASE equipment_test"   # solo para las pruebas
 
@@ -121,23 +121,26 @@ npm run dev:web                      # http://localhost:5173
 
 > PostgreSQL usa el puerto **5433** para no chocar con una instalación local en el 5432.
 
-**Cuentas locales de demo** (generadas con `auth:hash` en su `.env`, solo para
-desarrollo):
+### Cuentas de login
 
-| Usuario | Contraseña | Rol |
-|---|---|---|
-| `supervisor` | (definida en su `.env`) | Supervisor |
-| `operador` | (definida en su `.env`) | Operador |
-
-Para crear otras cuentas, genere el hash y un secreto nuevo:
+El repositorio no trae ninguna cuenta: la API y `docker compose` no arrancan hasta que `.env`
+tenga las variables `AUTH_*`, y el error indica cuáles faltan. Para cada rol elija una
+contraseña y genere su hash:
 
 ```bash
-AUTH_PASSWORD='la-contraseña' npm --prefix apps/api run auth:hash
-# imprime PASSWORD_HASH=scrypt:... y AUTH_TOKEN_SECRET=...
+npm --prefix apps/api ci
+AUTH_PASSWORD='contraseña-del-supervisor' npm --prefix apps/api run auth:hash
+AUTH_PASSWORD='contraseña-del-operador' npm --prefix apps/api run auth:hash
+# cada corrida imprime PASSWORD_HASH=scrypt:... y un AUTH_TOKEN_SECRET=... nuevo
 ```
 
+Copie en `.env` el `PASSWORD_HASH` de cada cuenta (`AUTH_SUPERVISOR_PASSWORD_HASH`,
+`AUTH_OPERATOR_PASSWORD_HASH`) y uno de los `AUTH_TOKEN_SECRET`. Los usuarios por defecto son
+`supervisor` y `operador`.
+
 La contraseña se pasa por variable de entorno y no como argumento, para que no quede en el
-historial de la terminal.
+historial de la terminal. En producción las mismas variables viven en Railway (ver
+[Configuración desde cero](#configuración-desde-cero)).
 
 ### Todo con Docker
 
