@@ -36,5 +36,6 @@ describe('parseSession', () => {
     expect(parseSession('not json', now)).toBeNull();
     expect(parseSession(null, now)).toBeNull();
     expect(parseSession(JSON.stringify({ ...valid, user: { username: 'x', role: 'ADMIN' } }), now)).toBeNull();
+    expect(parseSession(JSON.stringify({ ...valid, expiresAt: 'not a date' }), now)).toBeNull();
   });
 });

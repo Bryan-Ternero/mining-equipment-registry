@@ -32,7 +32,9 @@ export function App() {
   useEffect(() => {
     if (!session) return;
     const ms = new Date(session.expiresAt).getTime() - Date.now();
-    const timer = setTimeout(() => logout('Su sesión expiró. Ingrese nuevamente.'), Math.max(0, ms));
+    // setTimeout fires at once beyond 2^31-1 ms (~24.8 days): cap it
+    const delay = Math.min(Math.max(0, ms), 2 ** 31 - 1);
+    const timer = setTimeout(() => logout('Su sesión expiró. Ingrese nuevamente.'), delay);
     return () => clearTimeout(timer);
   }, [session, logout]);
 

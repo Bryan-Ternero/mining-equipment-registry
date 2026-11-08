@@ -23,7 +23,9 @@ export function parseSession(raw: string | null, now = Date.now()): Session | nu
       typeof data?.expiresAt === 'string' &&
       typeof data?.user?.username === 'string' &&
       (data.user.role === 'SUPERVISOR' || data.user.role === 'OPERADOR');
-    if (!valid || new Date(data.expiresAt).getTime() <= now) return null;
+    // an unparseable date is NaN, and "NaN <= now" is false: check it explicitly
+    const expires = new Date(data.expiresAt).getTime();
+    if (!valid || !Number.isFinite(expires) || expires <= now) return null;
     return { token: data.token, expiresAt: data.expiresAt, user: { username: data.user.username, role: data.user.role } };
   } catch {
     return null;
