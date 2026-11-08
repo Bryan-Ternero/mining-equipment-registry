@@ -53,7 +53,7 @@ Evidencia de la ruta: no hay motivo para el disparador Writer (las unidades son 
 ## Bitácora
 
 - **L1** (2026-11-07, usuario): inicio del Reto Codea. Primero el plan y después el desarrollo, verificando punto por punto que se cumpla cada requisito del PDF.
-- **L2** (2026-11-07, usuario, textual): "recuerda que debes usar gentle ai y odd" — el trabajo sigue el flujo ODD con revisión de gentle-ai.
+- **L2** (2026-11-07, usuario): pidió usar gentle-ai y ODD; el trabajo sigue el flujo ODD con revisión de gentle-ai.
 - **L3** (2026-11-07): T2 construida. Se fijaron versiones mayores estables y probadas de las dependencias (Prisma 6, Vitest 3, TS 5, ESLint 9): la última versión de Prisma es una RC y Prisma 7 cambia la configuración de la conexión. El catálogo de tipos lo inserta la migración inicial (sin seed aparte en el deploy). Prisma bloquea `migrate reset` para agentes de IA, así que la preparación de integración usa el no destructivo `migrate deploy` y cada prueba elimina sus propias filas. Una prueba detectó un error doble con un código vacío; corregido con `abort: true`. Espejo de Engram pendiente (el modo auto no pudo revisar la llamada).
 - **L4** (2026-11-07, usuario, textual): "Ya está docker abierto,todo lo que sea engram se guardará al final del proyecto" — espejo de Engram aplazado al cierre del proyecto por decisión del usuario.
 - **L5** (2026-11-07, usuario): estrategia de cadena de entrega "stacked-to-main". Partes: commit inicial en `main`; `feat/api` (dominio+esquema, luego REST+pruebas de integración); `feat/web` apilada sobre `feat/api`; luego deploy, CI/docker, documentación. Cada parte se convierte en un PR a `main` una vez que exista el repositorio de GitHub; el merge sigue siendo decisión del usuario.
