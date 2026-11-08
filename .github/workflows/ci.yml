@@ -92,8 +92,8 @@ jobs:
           ./deploy.sh > out.txt 2>&1
           code=$?
           cat out.txt
-          test "$code" -eq 2
-          grep -q "missing  variable PUBLIC_API_URL" out.txt
+          test "$code" -eq 2 || exit 1
+          grep -q "missing  variable PUBLIC_API_URL" out.txt || exit 1
           grep -q "missing  tool railway" out.txt
       - name: Fails with exit code 2 on an unknown argument
         run: |
