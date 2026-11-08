@@ -1,0 +1,36 @@
+{
+  "name": "@equipment/api",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "dotenv-cli -e ../../.env -- tsx watch src/server.ts",
+    "build": "prisma generate && tsc -p tsconfig.build.json",
+    "start": "node dist/server.js",
+    "db:migrate": "dotenv-cli -e ../../.env -- prisma migrate deploy",
+    "db:status": "dotenv-cli -e ../../.env -- prisma migrate status",
+    "test": "vitest run tests/unit",
+    "test:int": "dotenv-cli -e ../../.env -- vitest run --config vitest.integration.config.ts",
+    "lint": "eslint src tests",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fastify/cors": "^11.4.1",
+    "@prisma/client": "^6.19.3",
+    "fastify": "^5.12.8",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@types/node": "^24.19.2",
+    "dotenv-cli": "^11.1.0",
+    "eslint": "^9.39.5",
+    "prisma": "^6.19.3",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.72.1",
+    "vitest": "^3.2.7"
+  }
+}
