@@ -1,0 +1,62 @@
+// Data model of the equipment registry.
+//
+// - The maintenance interval belongs to the equipment type (catalogue table), not to code.
+// - "Requiere mantenimiento" is derived from hourmeter, lastServiceHours and the interval:
+//   it is never stored, so it cannot drift out of sync with the hourmeter or the history.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// Equipment family and its maintenance interval. Rows are inserted by a migration.
+model EquipmentType {
+  code                     String @id // CAMION | EXCAVADORA | PERFORADORA
+  name                     String
+  maintenanceIntervalHours Int
+
+  equipment Equipment[]
+
+  @@map("equipment_types")
+}
+
+model Equipment {
+  id       String @id @default(uuid()) @db.Uuid
+  code     String @unique
+  typeCode String
+
+  /// accumulated hours of use
+  hourmeter Decimal @default(0) @db.Decimal(10, 1)
+
+  /// hourmeter reading at the last service: the start of the current cycle (0 until the first one)
+  lastServiceHours Decimal @default(0) @db.Decimal(10, 1)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  type         EquipmentType       @relation(fields: [typeCode], references: [code])
+  maintenances MaintenanceRecord[]
+
+  @@index([typeCode])
+  @@map("equipment")
+}
+
+/// One service performed on an equipment. Registering it restarts the equipment's cycle.
+model MaintenanceRecord {
+  id          String   @id @default(uuid()) @db.Uuid
+  equipmentId String   @db.Uuid
+  /// hourmeter reading when the service was performed
+  hourmeter   Decimal  @db.Decimal(10, 1)
+  performedAt DateTime @default(now())
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  equipment Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+
+  @@index([equipmentId, performedAt])
+  @@map("maintenance_records")
+}
