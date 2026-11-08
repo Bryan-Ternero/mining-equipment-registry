@@ -58,6 +58,22 @@ describe('login', () => {
     expect(blocked.headers['retry-after']).toBeDefined();
     await throttled.close();
   });
+
+  it('keys the limit on the address the proxy saw, not on a forged X-Forwarded-For', async () => {
+    const throttled = buildApp({ config, db });
+    // the client forges the leftmost entry; the platform proxy appends the real address last
+    const attempt = (i: number, password = 'bad') =>
+      throttled.inject({
+        method: 'POST',
+        url: '/api/auth/login',
+        payload: { username: 'jefe', password },
+        remoteAddress: '10.20.0.1',
+        headers: { 'x-forwarded-for': `203.0.113.${i}, 198.51.100.7` },
+      });
+    for (let i = 0; i < 5; i++) expect((await attempt(i)).statusCode).toBe(401);
+    expect((await attempt(99, PASSWORDS.SUPERVISOR)).statusCode).toBe(429);
+    await throttled.close();
+  });
 });
 
 describe('guard', () => {
@@ -75,6 +91,17 @@ describe('guard', () => {
     const forged = await app.inject({ method: 'GET', url: '/api/equipment', headers: { authorization: 'Bearer abc.def' } });
     expect(forged.statusCode).toBe(401);
     expect((await app.inject({ method: 'GET', url: '/health' })).statusCode).toBe(200);
+  });
+
+  it('cannot be skipped with a percent-encoded path', async () => {
+    for (const [method, url] of [
+      ['GET', '/%61pi/equipment'],
+      ['GET', '/%61pi/equipment-types'],
+      ['PATCH', '/%61pi/equipment/00000000-0000-4000-8000-000000000000'],
+    ] as const) {
+      const res = await app.inject({ method, url, payload: method === 'PATCH' ? { hourmeter: 1 } : undefined });
+      expect(res.statusCode, `${method} ${url}`).toBe(401);
+    }
   });
 
   it('still answers CORS preflights without a session', async () => {

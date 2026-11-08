@@ -33,6 +33,7 @@ export const equipmentRoutes: FastifyPluginAsync<{ service: EquipmentService }> 
   });
 
   app.patch('/equipment/:id', async (request) => {
+    requireUser(request); // defense in depth: never rely on the global hook alone for a write
     const { id } = parse(idParamSchema, request.params);
     const input = parse(updateEquipmentSchema, request.body);
     if (input.code !== undefined || input.typeCode !== undefined) {

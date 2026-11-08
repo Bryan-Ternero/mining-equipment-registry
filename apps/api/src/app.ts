@@ -19,8 +19,10 @@ export interface AppDeps {
 const PUBLIC_API_ROUTES = new Set(['POST /api/auth/login']);
 
 export function buildApp({ config, db, logger = false }: AppDeps): FastifyInstance {
-  // behind Railway's proxy: request.ip must be the client, not the proxy (login throttling)
-  const app = Fastify({ logger, trustProxy: true });
+  // behind Railway's proxy: trust exactly that one hop, so request.ip is the address the proxy
+  // appended to X-Forwarded-For. Trusting every hop would let a client forge its own address and
+  // dodge the login throttle.
+  const app = Fastify({ logger, trustProxy: (_address: string, hop: number) => hop < 1 });
 
   app.register(cors, {
     origin: config.webOrigins,
@@ -31,9 +33,13 @@ export function buildApp({ config, db, logger = false }: AppDeps): FastifyInstan
   app.decorateRequest('user', null);
   app.addHook('onRequest', async (request) => {
     request.user = sessionFrom(request, config.auth.tokenSecret);
-    const path = request.url.split('?')[0] ?? '';
-    if (request.method === 'OPTIONS' || !path.startsWith('/api/')) return;
-    if (!request.user && !PUBLIC_API_ROUTES.has(`${request.method} ${path}`)) throw unauthorized();
+  });
+  // decided on the route the router matched, never on the raw URL: the router decodes the path,
+  // so "/%61pi/equipment" reaches "/api/equipment" while failing a raw "/api/" prefix check
+  app.addHook('preHandler', async (request) => {
+    const route = request.routeOptions.url;
+    if (request.method === 'OPTIONS' || !route?.startsWith('/api/')) return;
+    if (!request.user && !PUBLIC_API_ROUTES.has(`${request.method} ${route}`)) throw unauthorized();
   });
 
   // one error shape for every failure: { error: { code, message, details? } }
