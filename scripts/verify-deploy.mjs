@@ -4,7 +4,8 @@
  *
  * Env: PUBLIC_API_URL, PUBLIC_WEB_URL, EXPECTED_VERSION,
  *      VERIFY_SCOPE=all|web (web: only the frontend, used on the unpromoted candidate),
- *      VERIFY_ATTEMPTS (default 6, with growing waits: routing and aliases take a few seconds).
+ *      VERIFY_ATTEMPTS (default 6, with growing waits: routing and aliases take a few seconds),
+ *      VERIFY_LOGIN=0 to skip the login check (a rollback may restore a version older than the login).
  *
  * Exit codes: 0 healthy, 1 a check failed, 3 the frontend is behind Vercel Deployment
  * Protection (a login wall, so it cannot be inspected from here).
@@ -15,6 +16,7 @@ const web = (process.env.PUBLIC_WEB_URL ?? '').replace(/\/$/, '');
 const expectedVersion = process.env.EXPECTED_VERSION ?? '';
 const scope = process.env.VERIFY_SCOPE ?? 'all';
 const attempts = Number(process.env.VERIFY_ATTEMPTS ?? 6);
+const checkLogin = process.env.VERIFY_LOGIN !== '0';
 
 // a bad value must never turn into "zero checks, exit 0"
 if (!Number.isInteger(attempts) || attempts < 1) {
@@ -43,10 +45,19 @@ async function checkApi() {
     throw new Error(`API reports version ${health.version}, expected ${expectedVersion} (old build still live?)`);
   }
 
-  const types = await get(`${api}/api/equipment-types`);
-  if (types.status !== 200) throw new Error(`API /api/equipment-types answered ${types.status}`);
-  const rows = await types.json();
-  if (!Array.isArray(rows) || rows.length !== 3) throw new Error('API returned an unexpected equipment type catalogue');
+  // the login must be live: anonymous calls are rejected and the login route answers
+  if (checkLogin) {
+  const anonymous = await get(`${api}/api/equipment`);
+  if (anonymous.status !== 401) {
+    throw new Error(`API /api/equipment answered ${anonymous.status} without a session (expected 401: login not enforced)`);
+  }
+  const login = await get(`${api}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: '{}',
+  });
+  if (login.status !== 400) throw new Error(`API /api/auth/login answered ${login.status} to an empty body (expected 400)`);
+  }
 
   const preflight = await get(`${api}/api/equipment`, {
     method: 'OPTIONS',
@@ -55,7 +66,7 @@ async function checkApi() {
   const allowed = preflight.headers.get('access-control-allow-origin');
   if (allowed !== web) throw new Error(`CORS does not allow ${web} (allow-origin: ${allowed ?? 'none'})`);
 
-  return `API healthy, version ${health.version}, CORS allows ${web}`;
+  return `API healthy, version ${health.version}, ${checkLogin ? 'login enforced, ' : ''}CORS allows ${web}`;
 }
 
 async function checkWeb() {

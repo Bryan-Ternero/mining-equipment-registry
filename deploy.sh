@@ -139,6 +139,21 @@ ok "Vercel: $(vercel whoami 2>/dev/null | tail -n1)"
 (cd apps/web && vercel link --yes --project "$VERCEL_PROJECT_NAME" >/dev/null 2>&1) ||
   fail "Could not link the Vercel project '$VERCEL_PROJECT_NAME'. Check the name in .env." 3
 
+# the API refuses to start without its login accounts: check them before building anything
+API_VARS="$(railway variable list --service "$API_SERVICE" "${RAILWAY_SCOPE[@]}" --json 2>/dev/null)" ||
+  fail "Could not read the variables of the '$API_SERVICE' service in Railway." 3
+missing_auth=()
+for name in AUTH_TOKEN_SECRET AUTH_SUPERVISOR_USERNAME AUTH_SUPERVISOR_PASSWORD_HASH AUTH_OPERATOR_USERNAME AUTH_OPERATOR_PASSWORD_HASH; do
+  [ -n "$(json_field "$API_VARS" "$name")" ] || missing_auth+=("$name")
+done
+if [ "${#missing_auth[@]}" -gt 0 ]; then
+  printf '    missing  %s\n' "${missing_auth[@]}" >&2
+  fail "The API has no login accounts configured in Railway. Generate them with
+       AUTH_PASSWORD='...' npm --prefix apps/api run auth:hash
+       and set them with: railway variable set NAME=value --service $API_SERVICE" 2
+fi
+ok "login accounts configured in Railway"
+
 # ---------------------------------------------------------------------------
 step "3/7 Version and current production state"
 
@@ -250,7 +265,7 @@ publish_api() {
 
 verify() {
   PUBLIC_API_URL="$PUBLIC_API_URL" PUBLIC_WEB_URL="$1" EXPECTED_VERSION="$2" \
-    VERIFY_SCOPE="${3:-all}" VERIFY_ATTEMPTS="${4:-6}" node scripts/verify-deploy.mjs
+    VERIFY_SCOPE="${3:-all}" VERIFY_ATTEMPTS="${4:-6}" VERIFY_LOGIN="${5:-1}" node scripts/verify-deploy.mjs
 }
 
 API_PUBLISHED=0
@@ -286,7 +301,8 @@ rollback() {
 
   if [ "$restored" -eq 1 ] && [ -n "$PREV_API_VERSION" ]; then
     printf '    verifying the restored state\n'
-    verify "$PUBLIC_WEB_URL" "$PREV_API_VERSION" || restored=0
+    # the restored version may predate the login, so its check is skipped here
+    verify "$PUBLIC_WEB_URL" "$PREV_API_VERSION" all 6 0 || restored=0
   fi
 
   if [ "$restored" -eq 1 ]; then
