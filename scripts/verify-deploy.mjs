@@ -16,6 +16,16 @@ const expectedVersion = process.env.EXPECTED_VERSION ?? '';
 const scope = process.env.VERIFY_SCOPE ?? 'all';
 const attempts = Number(process.env.VERIFY_ATTEMPTS ?? 6);
 
+// a bad value must never turn into "zero checks, exit 0"
+if (!Number.isInteger(attempts) || attempts < 1) {
+  console.error(`    fail  VERIFY_ATTEMPTS must be a positive integer (got ${process.env.VERIFY_ATTEMPTS})`);
+  process.exit(1);
+}
+if (!api || !web) {
+  console.error('    fail  PUBLIC_API_URL and PUBLIC_WEB_URL are required');
+  process.exit(1);
+}
+
 class Protected extends Error {}
 
 async function get(url, init = {}) {

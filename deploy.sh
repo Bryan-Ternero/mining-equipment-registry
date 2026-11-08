@@ -87,6 +87,8 @@ step "1/7 Preflight: tools and environment variables"
 if [ -f .env ]; then
   while IFS='=' read -r key value; do
     [[ "$key" =~ ^[A-Z_][A-Z0-9_]*$ ]] || continue
+    # strip one pair of surrounding quotes: KEY="value" and KEY='value' mean value
+    if [[ "$value" =~ ^\"(.*)\"$ || "$value" =~ ^\'(.*)\'$ ]]; then value="${BASH_REMATCH[1]}"; fi
     [ -n "${!key:-}" ] || export "$key=$value"
   done < <(grep -E '^[A-Z_][A-Z0-9_]*=' .env | sed 's/\r$//')
   ok "variables read from .env"
