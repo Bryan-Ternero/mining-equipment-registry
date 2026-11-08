@@ -1,7 +1,7 @@
 import type { PrismaClient } from '@prisma/client';
 import { describe, expect, it } from 'vitest';
 import { buildApp } from '../../src/app.js';
-import { app } from './helpers.js';
+import { app, config } from './helpers.js';
 
 describe('GET /health', () => {
   it('answers 200 with the database up and the deployed version', async () => {
@@ -12,7 +12,7 @@ describe('GET /health', () => {
 
   it('answers 503 when the database does not respond', async () => {
     const brokenDb = { $queryRaw: () => Promise.reject(new Error('connection refused')) } as unknown as PrismaClient;
-    const broken = buildApp({ config: { port: 0, webOrigins: [], version: 'v' }, db: brokenDb });
+    const broken = buildApp({ config, db: brokenDb });
     const res = await broken.inject({ method: 'GET', url: '/health' });
     expect(res.statusCode).toBe(503);
     expect(res.json()).toMatchObject({ status: 'degraded', db: 'down' });

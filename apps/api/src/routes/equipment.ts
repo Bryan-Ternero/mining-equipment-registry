@@ -1,4 +1,5 @@
 import type { FastifyPluginAsync } from 'fastify';
+import { requireRole, requireUser } from '../auth/guard.js';
 import {
   createEquipmentSchema,
   createMaintenanceSchema,
@@ -8,6 +9,10 @@ import {
 } from '../schemas.js';
 import type { EquipmentService } from '../services/equipment-service.js';
 
+/**
+ * Roles: both can read, update the hourmeter and register maintenance; only the supervisor
+ * creates, deletes, recodes or retypes equipment.
+ */
 export const equipmentRoutes: FastifyPluginAsync<{ service: EquipmentService }> = async (app, { service }) => {
   app.get('/equipment-types', async () => {
     const types = await service.listTypes();
@@ -17,6 +22,7 @@ export const equipmentRoutes: FastifyPluginAsync<{ service: EquipmentService }> 
   app.get('/equipment', async () => service.list());
 
   app.post('/equipment', async (request, reply) => {
+    requireRole(request, 'SUPERVISOR', 'crear equipos');
     const created = await service.create(parse(createEquipmentSchema, request.body));
     return reply.status(201).send(created);
   });
@@ -27,11 +33,17 @@ export const equipmentRoutes: FastifyPluginAsync<{ service: EquipmentService }> 
   });
 
   app.patch('/equipment/:id', async (request) => {
+    requireUser(request); // defense in depth: never rely on the global hook alone for a write
     const { id } = parse(idParamSchema, request.params);
-    return service.update(id, parse(updateEquipmentSchema, request.body));
+    const input = parse(updateEquipmentSchema, request.body);
+    if (input.code !== undefined || input.typeCode !== undefined) {
+      requireRole(request, 'SUPERVISOR', 'cambiar el código o el tipo de un equipo');
+    }
+    return service.update(id, input);
   });
 
   app.delete('/equipment/:id', async (request, reply) => {
+    requireRole(request, 'SUPERVISOR', 'eliminar equipos');
     const { id } = parse(idParamSchema, request.params);
     await service.remove(id);
     return reply.status(204).send();
@@ -43,8 +55,9 @@ export const equipmentRoutes: FastifyPluginAsync<{ service: EquipmentService }> 
   });
 
   app.post('/equipment/:id/maintenances', async (request, reply) => {
+    const user = requireUser(request);
     const { id } = parse(idParamSchema, request.params);
-    const result = await service.registerMaintenance(id, parse(createMaintenanceSchema, request.body));
+    const result = await service.registerMaintenance(id, parse(createMaintenanceSchema, request.body), user.username);
     return reply.status(201).send(result);
   });
 };

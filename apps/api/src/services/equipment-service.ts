@@ -33,6 +33,7 @@ export function toMaintenanceDto(row: MaintenanceRow) {
     hourmeter: row.hourmeter.toNumber(),
     performedAt: row.performedAt.toISOString(),
     notes: row.notes,
+    performedBy: row.performedBy,
     createdAt: row.createdAt.toISOString(),
   };
 }
@@ -136,7 +137,7 @@ export class EquipmentService {
   }
 
   /** records a service and restarts the cycle: the reading becomes the start of the next one */
-  async registerMaintenance(id: string, input: CreateMaintenanceInput) {
+  async registerMaintenance(id: string, input: CreateMaintenanceInput, performedBy: string) {
     try {
       return await this.db.$transaction(async (tx) => {
         await lockEquipment(tx, id);
@@ -170,6 +171,7 @@ export class EquipmentService {
             hourmeter: reading,
             performedAt,
             notes: input.notes || null,
+            performedBy,
           },
         });
         const equipment = await tx.equipment.update({

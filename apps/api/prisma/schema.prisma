@@ -53,6 +53,8 @@ model MaintenanceRecord {
   hourmeter   Decimal  @db.Decimal(10, 1)
   performedAt DateTime @default(now())
   notes       String?
+  /// username of the session that registered it (null for records older than the login)
+  performedBy String?
   createdAt   DateTime @default(now())
 
   equipment Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)

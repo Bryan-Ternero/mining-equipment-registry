@@ -24,18 +24,21 @@ export function ConfirmDelete({ equipment, onConfirm, onClose }: ConfirmDeletePr
 
   return (
     <Modal title={`Eliminar ${equipment.code}`} onClose={onClose}>
-      <p>Se eliminará el equipo y todo su historial de mantenimientos. Esta acción no se puede deshacer.</p>
+      <p style={{ marginTop: 0 }}>
+        Se eliminará el equipo <strong>{equipment.code}</strong> y todo su historial de mantenimientos. Esta acción no se
+        puede deshacer.
+      </p>
       {error && (
         <p className="form-error" role="alert">
           {error}
         </p>
       )}
       <footer className="form-actions">
-        <button type="button" className="button" onClick={onClose}>
+        <button type="button" className="btn btn-neutral" onClick={onClose}>
           Cancelar
         </button>
-        <button type="button" className="button danger" onClick={handleConfirm} disabled={deleting}>
-          {deleting ? 'Eliminando…' : 'Eliminar'}
+        <button type="button" className="btn btn-danger" onClick={handleConfirm} disabled={deleting}>
+          {deleting ? 'Eliminando…' : 'Eliminar equipo'}
         </button>
       </footer>
     </Modal>
