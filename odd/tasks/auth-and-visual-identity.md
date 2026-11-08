@@ -34,10 +34,10 @@ User request quoted verbatim (2026-11-08):
 
 | ID | Specs | Route | Status | Commit / evidence |
 |---|---|---|---|---|
-| T1 | S1, S5 | inline | pending | API auth: scrypt hashes, signed tokens, login + me, guard on `/api/*`, role checks, login throttling, tests |
-| T2 | S4 | inline | pending | `performedBy` migration, set from the session; API tests |
-| T3 | S1-S5 | inline | pending | Web: new design system, app shell, 60/40 login, role-aware actions, maintenance date/time + comments |
-| T4 | S1 | inline | pending | Deploy: auth variables in preflight and Railway, verifier checks the API rejects anonymous calls; README; real deploy |
+| T1 | S1, S5 | inline | done | `ffbb183` + correction `ba6640d`; RDD risk/resilience/reliability: correction (guard bypass via `/%61pi/`, forged X-Forwarded-For) reproduced RED, fixed, validated, approved |
+| T2 | S4 | inline | done | `5fcf8ce`; migration `20261108120000_maintenance_performed_by` (nullable column); under_budget, reviewed with T3 slice |
+| T3 | S1-S5 | inline | done | `57a5e8c` + `cbd8c8d`; web unit 12/12; Edge headless screenshots (login 60/40, dashboards per role, dialog, phone); reload-with-session bug found by screenshots and fixed; RDD approved |
+| T4 | S1 | inline | done | `f617ebb`; preflight exit 2 observed with missing AUTH_*; deploy exit 0, `/health` f617ebb, anon 401, encoded path 401, operator create 403; RDD declined by user |
 
 Route evidence: one sequential feature (web depends on the auth contract), no Writer trigger reason; the parent writes inline.
 
@@ -45,3 +45,4 @@ Route evidence: one sequential feature (web depends on the auth contract), no Wr
 
 - **L1** (2026-11-08, user, verbatim): "necesito un login y un cambio completo de identidad visual,guiate del siguiente diseño para todo el sistema (https://dribbble.com/shots/21602075-Bootstrap-Table-Screen-Webpixels),el login debe funcional basado en roles con 2 roles y tener un diseño 60/40, 60% imagen de referencia de lo que trata mas el nombre del proyecto,40% login,ademas necesito que cada que se haga un mantenimiente se guarde la fecha y hora en que se realizo y los comentarios,si necesitas algo mas de informacion dimelo."
 - **L2** (2026-11-08, user, verbatim): "me sirve" — accepts the roles table (S5) and the stated assumptions.
+- **L3** (2026-11-08): hash separator is ":" because dotenv expands "$NAME" in .env values. trustProxy limited to the platform hop (function form; Fastify 5 types reject a number). The login check is skipped when verifying a rollback, which may restore a pre-login version. Production accounts: usernames `supervisor` / `operador`, random passwords handed to the user, only scrypt hashes in Railway. Deploy evidence in T4. Follow-ups (advisory): token in localStorage (XSS exposure, accepted for a static SPA on another origin), Google Fonts third-party load, interval numbers hardcoded on the pre-login screen.
