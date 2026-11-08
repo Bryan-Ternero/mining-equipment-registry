@@ -62,9 +62,10 @@ Frontend y backend se publican por separado y se despliegan con **un solo comand
    [`odd/tasks/`](odd/tasks/), junto con las suposiciones y una bitácora de cada decisión.
 2. **Pruebas antes del código.** Cada regla se escribió primero como una prueba que fallaba y
    después se implementó.
-3. **Cambios chicos y revisados.** Cada parte entró a `main` por un pull request con CI en verde;
-   los cambios de riesgo pasaron además por una revisión automática (gentle-ai) y sus hallazgos
-   se corrigieron en commits propios.
+3. **Cambios chicos y revisados.** Cada parte entró a `main` por un pull request. Desde que existe
+   el CI (PR #4) cada uno se integró con el CI en verde; los tres primeros, anteriores al CI, se
+   verificaron corriendo las mismas pruebas en local. Los cambios de riesgo pasaron además por una
+   revisión automática (gentle-ai) y sus hallazgos se corrigieron en commits propios.
 4. **Verificación real.** Cada despliegue se comprobó contra producción: `/health`, inicio de sesión
    por rol y capturas en escritorio y celular.
 
