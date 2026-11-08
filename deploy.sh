@@ -173,11 +173,13 @@ fi
 step "4/7 Local build (nothing is published if this fails)"
 
 (cd apps/api && npm ci --no-audit --no-fund >/dev/null && npm run build >/dev/null) ||
-  fail "API build failed. Run 'npm --prefix apps/api run build' to see the error." 5
+  fail "API build failed. Run 'npm --prefix apps/api run build' to see the error.
+       EPERM on Windows means a running dev server or test still holds node_modules: stop it and retry." 5
 ok "API built"
 
 (cd apps/web && npm ci --no-audit --no-fund >/dev/null && VITE_API_URL="$PUBLIC_API_URL" npm run build >/dev/null) ||
-  fail "Frontend build failed. Run 'npm --prefix apps/web run build' to see the error." 5
+  fail "Frontend build failed. Run 'npm --prefix apps/web run build' to see the error.
+       EPERM on Windows means a running dev server or test still holds node_modules: stop it and retry." 5
 ok "frontend built (VITE_API_URL=$PUBLIC_API_URL)"
 
 # ---------------------------------------------------------------------------
