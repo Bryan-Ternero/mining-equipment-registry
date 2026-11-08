@@ -106,5 +106,5 @@ jobs:
           PUBLIC_API_URL=https://a.example PUBLIC_WEB_URL=https://w.example VERIFY_ATTEMPTS=0 node scripts/verify-deploy.mjs > out.txt 2>&1
           code=$?
           cat out.txt
-          test "$code" -eq 1
+          test "$code" -eq 1 || exit 1
           grep -q "VERIFY_ATTEMPTS must be a positive integer" out.txt
