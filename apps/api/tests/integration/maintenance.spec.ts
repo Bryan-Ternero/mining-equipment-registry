@@ -1,0 +1,98 @@
+import { describe, expect, it } from 'vitest';
+import { app, createEquipment, db } from './helpers.js';
+
+const register = (id: string, payload: Record<string, unknown> = {}) =>
+  app.inject({ method: 'POST', url: `/api/equipment/${id}/maintenances`, payload });
+
+describe('maintenance warning', () => {
+  it('shows "Requiere mantenimiento" exactly when the hourmeter reaches the type interval', async () => {
+    const truck = await createEquipment({ code: 'CAM-1', typeCode: 'CAMION', hourmeter: 249.9 });
+    expect(truck.requiresMaintenance).toBe(false);
+
+    const reached = await app.inject({ method: 'PATCH', url: `/api/equipment/${truck.id}`, payload: { hourmeter: 250 } });
+    expect(reached.json()).toMatchObject({ requiresMaintenance: true, hoursUntilMaintenance: 0 });
+
+    // each type has its own interval: 300 h is due for a drill, not for an excavator
+    const drill = await createEquipment({ code: 'PER-1', typeCode: 'PERFORADORA', hourmeter: 300 });
+    const excavator = await createEquipment({ code: 'EXC-1', typeCode: 'EXCAVADORA', hourmeter: 300 });
+    expect(drill.requiresMaintenance).toBe(true);
+    expect(excavator.requiresMaintenance).toBe(false);
+  });
+});
+
+describe('registering a maintenance', () => {
+  it('leaves history and restarts the cycle from the current reading', async () => {
+    const truck = await createEquipment({ code: 'CAM-2', typeCode: 'CAMION', hourmeter: 280 });
+    expect(truck.requiresMaintenance).toBe(true);
+
+    const res = await register(truck.id, { notes: 'Cambio de aceite' });
+    expect(res.statusCode).toBe(201);
+    const { maintenance, equipment } = res.json();
+    expect(maintenance).toMatchObject({ equipmentId: truck.id, hourmeter: 280, notes: 'Cambio de aceite' });
+    expect(equipment).toMatchObject({
+      hourmeter: 280,
+      lastServiceHours: 280,
+      hoursSinceService: 0,
+      hoursUntilMaintenance: 250,
+      requiresMaintenance: false,
+    });
+
+    // the new cycle is a full interval long: due again at 280 + 250 = 530
+    const before = await app.inject({ method: 'PATCH', url: `/api/equipment/${truck.id}`, payload: { hourmeter: 529.9 } });
+    expect(before.json().requiresMaintenance).toBe(false);
+    const due = await app.inject({ method: 'PATCH', url: `/api/equipment/${truck.id}`, payload: { hourmeter: 530 } });
+    expect(due.json().requiresMaintenance).toBe(true);
+
+    const stored = await db.maintenanceRecord.findMany({ where: { equipmentId: truck.id } });
+    expect(stored).toHaveLength(1);
+  });
+
+  it('accepts a reading above the hourmeter and moves the hourmeter to it', async () => {
+    const truck = await createEquipment({ code: 'CAM-3', typeCode: 'CAMION', hourmeter: 240 });
+    const res = await register(truck.id, { hourmeter: 255.5, performedAt: '2026-11-01T10:00:00Z' });
+    expect(res.statusCode).toBe(201);
+    expect(res.json().equipment).toMatchObject({ hourmeter: 255.5, lastServiceHours: 255.5 });
+    expect(res.json().maintenance.performedAt).toBe('2026-11-01T10:00:00.000Z');
+  });
+
+  it('rejects a reading below the hourmeter and a future date, writing nothing', async () => {
+    const truck = await createEquipment({ code: 'CAM-4', typeCode: 'CAMION', hourmeter: 300 });
+
+    const lower = await register(truck.id, { hourmeter: 299 });
+    expect(lower.statusCode).toBe(400);
+    const future = await register(truck.id, { performedAt: '2999-01-01T00:00:00Z' });
+    expect(future.statusCode).toBe(400);
+
+    expect(await db.maintenanceRecord.count()).toBe(0);
+    const stored = await db.equipment.findUniqueOrThrow({ where: { id: truck.id } });
+    expect(stored.lastServiceHours.toNumber()).toBe(0);
+  });
+
+  it('does not let the hourmeter be edited below the last service reading', async () => {
+    const truck = await createEquipment({ code: 'CAM-5', typeCode: 'CAMION', hourmeter: 300 });
+    await register(truck.id);
+
+    const res = await app.inject({ method: 'PATCH', url: `/api/equipment/${truck.id}`, payload: { hourmeter: 299.9 } });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error.details[0].field).toBe('hourmeter');
+    expect((await db.equipment.findUniqueOrThrow({ where: { id: truck.id } })).hourmeter.toNumber()).toBe(300);
+  });
+
+  it('lists the history newest first and 404s for an unknown equipment', async () => {
+    const truck = await createEquipment({ code: 'CAM-6', typeCode: 'CAMION', hourmeter: 0 });
+    await register(truck.id, { hourmeter: 250, performedAt: '2026-10-01T00:00:00Z' });
+    await register(truck.id, { hourmeter: 500, performedAt: '2026-11-01T00:00:00Z' });
+
+    const res = await app.inject({ method: 'GET', url: `/api/equipment/${truck.id}/maintenances` });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().map((m: { hourmeter: number }) => m.hourmeter)).toEqual([500, 250]);
+
+    const missing = await app.inject({
+      method: 'GET',
+      url: '/api/equipment/00000000-0000-4000-8000-000000000000/maintenances',
+    });
+    expect(missing.statusCode).toBe(404);
+    const missingPost = await register('00000000-0000-4000-8000-000000000000');
+    expect(missingPost.statusCode).toBe(404);
+  });
+});
