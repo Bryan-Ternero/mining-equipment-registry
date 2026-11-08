@@ -24,3 +24,7 @@ miners-fullstack-challenge-main/
 
 # gentle-ai skill registry: generated per machine, contains local paths
 .atl/
+
+# written and rewritten by `vercel link` on every deploy; the root rules above already cover
+# .vercel and .env*, so tracking it would leave the published tree dirty (deploy exit 4)
+apps/web/.gitignore
