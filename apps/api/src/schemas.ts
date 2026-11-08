@@ -20,8 +20,9 @@ const code = z
   .max(30, 'Máximo 30 caracteres.')
   .regex(/^[A-Z0-9][A-Z0-9-]*$/, 'Solo letras, números y guiones (ej. CAM-001).');
 
-const typeCode = z.enum(['CAMION', 'EXCAVADORA', 'PERFORADORA'], {
-  error: 'Tipo inválido: CAMION, EXCAVADORA o PERFORADORA.',
+// CARGADOR is temporary (deploy test, see migration 20261108160000_add_loader_type)
+const typeCode = z.enum(['CAMION', 'EXCAVADORA', 'PERFORADORA', 'CARGADOR'], {
+  error: 'Tipo inválido: CAMION, EXCAVADORA, PERFORADORA o CARGADOR.',
 });
 
 export const createEquipmentSchema = z.object({

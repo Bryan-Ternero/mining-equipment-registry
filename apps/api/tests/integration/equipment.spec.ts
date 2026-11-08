@@ -2,14 +2,22 @@ import { describe, expect, it } from 'vitest';
 import { createEquipment, db, inject } from './helpers.js';
 
 describe('equipment types', () => {
-  it('lists the three types with their maintenance interval', async () => {
+  it('lists the types with their maintenance interval, ordered by code', async () => {
     const res = await inject({ method: 'GET', url: '/api/equipment-types' });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual([
       { code: 'CAMION', name: 'Camión', maintenanceIntervalHours: 250 },
+      { code: 'CARGADOR', name: 'Cargador frontal', maintenanceIntervalHours: 400 },
       { code: 'EXCAVADORA', name: 'Excavadora', maintenanceIntervalHours: 500 },
       { code: 'PERFORADORA', name: 'Perforadora', maintenanceIntervalHours: 300 },
     ]);
+  });
+
+  it('accepts the temporary loader type and flags it at its own 400 h interval', async () => {
+    const before = await createEquipment({ code: 'CAR-01', typeCode: 'CARGADOR', hourmeter: 399.9 });
+    expect(before).toMatchObject({ typeName: 'Cargador frontal', intervalHours: 400, requiresMaintenance: false });
+    const due = await createEquipment({ code: 'CAR-02', typeCode: 'CARGADOR', hourmeter: 400 });
+    expect(due.requiresMaintenance).toBe(true);
   });
 });
 

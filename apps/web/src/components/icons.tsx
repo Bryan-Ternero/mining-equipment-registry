@@ -46,10 +46,20 @@ export const DrillIcon = (p: P) => (
   </Icon>
 );
 
+export const LoaderIcon = (p: P) => (
+  <Icon {...p}>
+    <path d="M3 16h9v-5H6l-3 3zM12 13h3l2-4h-2" />
+    <path d="M17 9l4 2-1 5h-3" />
+    <circle cx="6" cy="18" r="2" />
+    <circle cx="12" cy="18" r="2" />
+  </Icon>
+);
+
 export const typeIcon: Record<TypeCode, (p: P) => React.JSX.Element> = {
   CAMION: TruckIcon,
   EXCAVADORA: ExcavatorIcon,
   PERFORADORA: DrillIcon,
+  CARGADOR: LoaderIcon,
 };
 
 export const GridIcon = (p: P) => (

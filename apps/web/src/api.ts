@@ -1,6 +1,7 @@
 import type { Session } from './auth/session';
 
-export type TypeCode = 'CAMION' | 'EXCAVADORA' | 'PERFORADORA';
+// CARGADOR is temporary (deploy test)
+export type TypeCode = 'CAMION' | 'EXCAVADORA' | 'PERFORADORA' | 'CARGADOR';
 
 export interface EquipmentType {
   code: TypeCode;
