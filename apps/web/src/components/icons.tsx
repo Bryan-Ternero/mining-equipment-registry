@@ -55,12 +55,30 @@ export const LoaderIcon = (p: P) => (
   </Icon>
 );
 
+/** shown for a type this build does not know yet (for example, one added by a newer migration) */
+export const GenericEquipmentIcon = (p: P) => (
+  <Icon {...p}>
+    <rect x="4" y="7" width="16" height="10" rx="2" />
+    <path d="M8 7V5h8v2" />
+    <circle cx="8" cy="19" r="1.5" />
+    <circle cx="16" cy="19" r="1.5" />
+  </Icon>
+);
+
 export const typeIcon: Record<TypeCode, (p: P) => React.JSX.Element> = {
   CAMION: TruckIcon,
   EXCAVADORA: ExcavatorIcon,
   PERFORADORA: DrillIcon,
   CARGADOR: LoaderIcon,
 };
+
+/**
+ * Icon for any type code coming from the API. The database can be ahead of this bundle, so an
+ * unknown code must render a generic icon instead of an undefined component (which crashes React).
+ */
+export function iconFor(code: string): (p: P) => React.JSX.Element {
+  return Object.hasOwn(typeIcon, code) ? typeIcon[code as TypeCode] : GenericEquipmentIcon;
+}
 
 export const GridIcon = (p: P) => (
   <Icon {...p}>
