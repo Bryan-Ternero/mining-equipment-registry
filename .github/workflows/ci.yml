@@ -5,9 +5,13 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # never cancel runs on main, so every merged commit keeps its result
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   api:
@@ -99,5 +103,8 @@ jobs:
       - name: Verifier refuses an invalid retry count
         run: |
           set +e
-          PUBLIC_API_URL=https://a.example PUBLIC_WEB_URL=https://w.example VERIFY_ATTEMPTS=0 node scripts/verify-deploy.mjs
-          test "$?" -eq 1
+          PUBLIC_API_URL=https://a.example PUBLIC_WEB_URL=https://w.example VERIFY_ATTEMPTS=0 node scripts/verify-deploy.mjs > out.txt 2>&1
+          code=$?
+          cat out.txt
+          test "$code" -eq 1
+          grep -q "VERIFY_ATTEMPTS must be a positive integer" out.txt
