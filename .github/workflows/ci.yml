@@ -82,6 +82,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # full history and branches: the downgrade check compares commits
+          fetch-depth: 0
       - name: Syntax
         run: bash -n deploy.sh
       - name: ShellCheck
@@ -129,6 +132,27 @@ jobs:
           cat out.txt
           test "$code" -eq 4 || exit 1
           grep -q "is not on GitHub yet" out.txt
+      - name: Refuses to take production back to an older commit (exit 4)
+        run: |
+          # production "runs" origin/main (fake /health); deploy its parent, which is pushed but older
+          cat > "$RUNNER_TEMP/stubs/curl" <<'EOF'
+          #!/usr/bin/env bash
+          printf '{"status":"ok","db":"up","version":"%s"}' "$FAKE_PROD_VERSION"
+          EOF
+          chmod +x "$RUNNER_TEMP/stubs/curl"
+          prod=$(git rev-parse --short origin/main)
+          # a separate worktree on the older commit, so the later steps keep this job's checkout
+          git worktree add -q --detach "$RUNNER_TEMP/older" origin/main~1
+          cp deploy.sh "$RUNNER_TEMP/older/deploy.sh"
+          cd "$RUNNER_TEMP/older"
+          set +e
+          PATH="$RUNNER_TEMP/stubs:$PATH" FAKE_PROD_VERSION="$prod" PUBLIC_API_URL=https://api.example.com \
+            PUBLIC_WEB_URL=https://web.example.com RAILWAY_PROJECT_ID=ci VERCEL_PROJECT_NAME=ci \
+            ./deploy.sh --allow-dirty > "$RUNNER_TEMP/downgrade.txt" 2>&1
+          code=$?
+          cat "$RUNNER_TEMP/downgrade.txt"
+          test "$code" -eq 4 || exit 1
+          grep -q "is not part of the history" "$RUNNER_TEMP/downgrade.txt"
       - name: Verifier refuses an invalid retry count
         run: |
           set +e
