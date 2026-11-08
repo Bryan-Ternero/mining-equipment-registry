@@ -199,7 +199,15 @@ fi
 # never take production backwards by accident: migrations are forward-only, so publishing code
 # older than what is live leaves the database ahead of the code (for example, data of a type the
 # old frontend cannot draw). Same commit and descendants pass; the rollback uses its own path.
-if [ -n "$PREV_API_VERSION" ] && ! git merge-base --is-ancestor "$PREV_API_VERSION" HEAD; then
+ancestor=0
+if [ -n "$PREV_API_VERSION" ]; then
+  # 0: production is part of this history; 1: it is not (downgrade); anything else: git could
+  # not compare them (for example a shallow clone), which says nothing about a downgrade
+  git merge-base --is-ancestor "$PREV_API_VERSION" HEAD 2>/dev/null || ancestor=$?
+fi
+if [ "$ancestor" -gt 1 ]; then
+  warn "could not compare $VERSION with production ($PREV_API_VERSION): downgrade check skipped (shallow clone?)"
+elif [ "$ancestor" -eq 1 ]; then
   if [ "$ALLOW_DOWNGRADE" -eq 0 ]; then
     fail "Production runs $PREV_API_VERSION, which is not part of the history of $VERSION:
        publishing it would take production back while its database keeps the newer migrations.
