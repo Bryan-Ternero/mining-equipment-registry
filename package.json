@@ -1,0 +1,20 @@
+{
+  "name": "mining-equipment-registry",
+  "private": true,
+  "description": "Mining equipment registry: React frontend, Fastify REST API, PostgreSQL and a one-command deploy.",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "db:up": "docker compose up -d db",
+    "db:down": "docker compose down",
+    "db:migrate": "npm --prefix apps/api run db:migrate",
+    "dev:api": "npm --prefix apps/api run dev",
+    "dev:web": "npm --prefix apps/web run dev",
+    "test": "npm --prefix apps/api test && npm --prefix apps/web test",
+    "test:int": "npm --prefix apps/api run test:int",
+    "lint": "npm --prefix apps/api run lint && npm --prefix apps/web run lint",
+    "typecheck": "npm --prefix apps/api run typecheck && npm --prefix apps/web run typecheck",
+    "deploy": "bash ./deploy.sh"
+  }
+}

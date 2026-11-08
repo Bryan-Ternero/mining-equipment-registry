@@ -1,0 +1,26 @@
+node_modules/
+dist/
+coverage/
+*.log
+
+# environment: only .env.example is committed
+.env
+.env.*
+!.env.example
+
+# deploy scratch and provider link state
+.deploy/
+.vercel/
+.railway/
+
+# editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# local reference copy of another project, not part of this repo
+miners-fullstack-challenge-main/
+
+# gentle-ai skill registry: generated per machine, contains local paths
+.atl/
