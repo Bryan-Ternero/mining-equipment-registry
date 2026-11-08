@@ -30,6 +30,19 @@ export function parseHours(raw: string): number | null {
   return Number.isFinite(value) ? value : null;
 }
 
+/** value for an <input type="datetime-local">: local time, to the minute */
+export function toLocalInput(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+/** ISO instant from a datetime-local value (read as local time); null when empty or invalid */
+export function fromLocalInput(value: string): string | null {
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(value)) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
 const dateFormat = new Intl.DateTimeFormat('es-CL', { dateStyle: 'medium', timeStyle: 'short' });
 
 export function formatDate(iso: string): string {

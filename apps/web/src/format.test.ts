@@ -1,5 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { cycleProgress, formatHours, parseHours } from './format';
+import { cycleProgress, formatHours, fromLocalInput, parseHours, toLocalInput } from './format';
+
+describe('date and time input', () => {
+  it('fills the input with the local date and time, to the minute', () => {
+    const date = new Date(2026, 10, 8, 9, 5, 42);
+    expect(toLocalInput(date)).toBe('2026-11-08T09:05');
+  });
+
+  it('turns the input back into an ISO instant, and rejects an empty or invalid value', () => {
+    expect(fromLocalInput('2026-11-08T09:05')).toBe(new Date(2026, 10, 8, 9, 5).toISOString());
+    expect(fromLocalInput('')).toBeNull();
+    expect(fromLocalInput('nope')).toBeNull();
+  });
+});
 
 describe('formatHours', () => {
   it('formats with thousands separator and at most one decimal', () => {

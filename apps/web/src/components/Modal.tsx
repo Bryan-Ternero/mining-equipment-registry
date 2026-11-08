@@ -1,4 +1,5 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useId, useRef, type ReactNode } from 'react';
+import { CloseIcon } from './icons';
 
 interface ModalProps {
   title: string;
@@ -9,6 +10,7 @@ interface ModalProps {
 /** native <dialog>: focus trap, Escape to close and backdrop come from the browser */
 export function Modal({ title, onClose, children }: ModalProps) {
   const ref = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
 
   useEffect(() => {
     const dialog = ref.current;
@@ -20,19 +22,19 @@ export function Modal({ title, onClose, children }: ModalProps) {
     <dialog
       ref={ref}
       className="modal"
-      aria-labelledby="modal-title"
+      aria-labelledby={titleId}
       onCancel={(event) => {
         event.preventDefault();
         onClose();
       }}
     >
       <header className="modal-header">
-        <h2 id="modal-title">{title}</h2>
-        <button type="button" className="icon-button" onClick={onClose} aria-label="Cerrar">
-          ×
+        <h2 id={titleId}>{title}</h2>
+        <button type="button" className="icon-btn" onClick={onClose} aria-label="Cerrar">
+          <CloseIcon />
         </button>
       </header>
-      {children}
+      <div className="modal-body">{children}</div>
     </dialog>
   );
 }
