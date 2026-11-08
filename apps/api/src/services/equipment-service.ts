@@ -52,6 +52,14 @@ function mapDbError(error: unknown, code?: string): never {
   throw error;
 }
 
+/**
+ * Row lock for read-validate-write sequences: two concurrent services or edits of the same
+ * equipment run one after the other, so the second one validates against the first one's result.
+ */
+async function lockEquipment(tx: Prisma.TransactionClient, id: string) {
+  await tx.$queryRaw`SELECT 1 FROM "equipment" WHERE "id" = ${id}::uuid FOR UPDATE`;
+}
+
 export class EquipmentService {
   constructor(private readonly db: PrismaClient) {}
 
@@ -85,6 +93,7 @@ export class EquipmentService {
   async update(id: string, input: UpdateEquipmentInput): Promise<EquipmentDto> {
     try {
       return await this.db.$transaction(async (tx) => {
+        await lockEquipment(tx, id);
         const current = await tx.equipment.findUnique({ where: { id } });
         if (!current) throw notFound('No existe el equipo solicitado.');
 
@@ -130,8 +139,21 @@ export class EquipmentService {
   async registerMaintenance(id: string, input: CreateMaintenanceInput) {
     try {
       return await this.db.$transaction(async (tx) => {
+        await lockEquipment(tx, id);
         const current = await tx.equipment.findUnique({ where: { id } });
         if (!current) throw notFound('No existe el equipo solicitado.');
+
+        const performedAt = input.performedAt ? new Date(input.performedAt) : new Date();
+        const last = await tx.maintenanceRecord.findFirst({
+          where: { equipmentId: id },
+          orderBy: { performedAt: 'desc' },
+        });
+        if (last && performedAt < last.performedAt) {
+          throw invalid(
+            `performedAt: no puede ser anterior al último mantenimiento (${last.performedAt.toISOString()}).`,
+            [{ field: 'performedAt', message: 'Anterior al último mantenimiento registrado.' }],
+          );
+        }
 
         const currentHours = current.hourmeter.toNumber();
         const reading = input.hourmeter ?? currentHours;
@@ -146,7 +168,7 @@ export class EquipmentService {
           data: {
             equipmentId: id,
             hourmeter: reading,
-            performedAt: input.performedAt ? new Date(input.performedAt) : undefined,
+            performedAt,
             notes: input.notes || null,
           },
         });

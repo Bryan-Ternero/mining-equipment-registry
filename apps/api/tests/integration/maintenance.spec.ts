@@ -68,6 +68,28 @@ describe('registering a maintenance', () => {
     expect(stored.lastServiceHours.toNumber()).toBe(0);
   });
 
+  it('rejects a service dated before the last registered one', async () => {
+    const truck = await createEquipment({ code: 'CAM-7', typeCode: 'CAMION', hourmeter: 0 });
+    await register(truck.id, { hourmeter: 250, performedAt: '2026-11-01T00:00:00Z' });
+
+    const older = await register(truck.id, { hourmeter: 260, performedAt: '2026-10-01T00:00:00Z' });
+    expect(older.statusCode).toBe(400);
+    expect(older.json().error.details[0].field).toBe('performedAt');
+    expect(await db.maintenanceRecord.count({ where: { equipmentId: truck.id } })).toBe(1);
+  });
+
+  it('serializes concurrent services so the hourmeter never ends below the history', async () => {
+    for (let round = 0; round < 5; round++) {
+      const truck = await createEquipment({ code: `RACE-${round}`, typeCode: 'CAMION', hourmeter: 300 });
+      await Promise.all([register(truck.id, { hourmeter: 310 }), register(truck.id, { hourmeter: 305 })]);
+
+      const stored = await db.equipment.findUniqueOrThrow({ where: { id: truck.id } });
+      const highest = await db.maintenanceRecord.aggregate({ where: { equipmentId: truck.id }, _max: { hourmeter: true } });
+      expect(stored.hourmeter.toNumber()).toBe(highest._max.hourmeter?.toNumber());
+      expect(stored.lastServiceHours.toNumber()).toBe(stored.hourmeter.toNumber());
+    }
+  });
+
   it('does not let the hourmeter be edited below the last service reading', async () => {
     const truck = await createEquipment({ code: 'CAM-5', typeCode: 'CAMION', hourmeter: 300 });
     await register(truck.id);
