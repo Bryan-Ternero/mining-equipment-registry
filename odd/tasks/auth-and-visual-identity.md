@@ -24,7 +24,7 @@ Solicitud del usuario citada textualmente (2026-11-08):
 
 - A1 Nombre del proyecto mostrado en el login: "Registro de equipos mineros".
 - A2 Dos cuentas fijas (una por rol) definidas por variables de entorno; sin pantalla de gestión de usuarios. Las contraseñas se guardan solo como hashes scrypt.
-- A3 Imagen del login: `login-haul-truck.jpg` del respaldo del proyecto anterior.
+- A3 Imagen del login: `login-haul-truck.jpg`, fotografía de un camión minero de acarreo en una faena a cielo abierto.
 - A4 La página de Dribbble no se puede descargar (respuesta vacía); el estilo sigue las convenciones públicas del CSS de Webpixels: Inter, primario índigo, fondo gray-50, tarjetas blancas con sombras suaves, encabezados de tabla en mayúsculas y atenuados, badges con punto.
 - A5 Editar el código de un equipo se considera exclusivo del supervisor (identidad del equipo), igual que su tipo.
 - A6 S4 ya lo guarda la API (`performedAt`, `notes`); lo que falta es la interfaz (entrada de fecha/hora) y quién lo realizó (`performedBy`, columna nueva).

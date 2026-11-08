@@ -19,8 +19,6 @@ coverage/
 .DS_Store
 Thumbs.db
 
-# copia local de referencia de otro proyecto, no forma parte de este repositorio
-miners-fullstack-challenge-main/
 
 # registro de skills de gentle-ai: se genera por máquina y contiene rutas locales
 .atl/

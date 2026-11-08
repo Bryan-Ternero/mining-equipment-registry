@@ -1,6 +1,6 @@
 # Registro de equipos mineros
 
-**Autor:** Bryan Ternero · [github.com/Bryan-Ternero](https://github.com/Bryan-Ternero)
+**Reto Codea** · Autor: Bryan Ternero · [github.com/Bryan-Ternero](https://github.com/Bryan-Ternero)
 
 Aplicación web para registrar los equipos de una faena (camiones, excavadoras y perforadoras),
 llevar su horómetro y saber cuándo cada uno **requiere mantenimiento**. Registrar un servicio
@@ -244,7 +244,7 @@ Copie en `.env` el `PASSWORD_HASH` de cada cuenta (`AUTH_SUPERVISOR_PASSWORD_HAS
 
 La contraseña se pasa por variable de entorno y no como argumento, para que no quede en el
 historial de la terminal. En producción las mismas variables viven en Railway (ver
-[Configuración desde cero](#configuración-desde-cero)).
+[Configuración inicial](#configuración-inicial)).
 
 ### Todo con Docker
 
@@ -326,7 +326,7 @@ DEPLOY_SIMULATE_FAILURE=verify ./deploy.sh
 | `9` | Falló la verificación final (con rollback) |
 | `10` | El rollback no se completó: producción requiere revisión manual |
 
-### Configuración desde cero
+### Configuración inicial
 
 Las variables del despliegue van en `.env` (ver [`.env.example`](.env.example)) o exportadas en
 la terminal. Las credenciales de la base **no** se guardan en ningún archivo: el script las lee
