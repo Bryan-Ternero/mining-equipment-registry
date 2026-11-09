@@ -162,32 +162,52 @@ jobs:
           git init -q --bare "$ORIGIN"
           git push -q "$ORIGIN" HEAD:refs/heads/main
           git clone -q -b main "$ORIGIN" "$RUNNER_TEMP/flow"
-          cat > "$RUNNER_TEMP/stubs/gh" <<'EOF'
+          # gh y npm falsos en su propia carpeta, para no alterar los stubs de los otros pasos
+          mkdir -p "$RUNNER_TEMP/flow-stubs"
+          cat > "$RUNNER_TEMP/flow-stubs/gh" <<'EOF'
           #!/usr/bin/env bash
           case "$1 $2" in
             "auth status") exit 0 ;;
-            "pr list") exit 0 ;;
+            "pr list") [ -f "$STATE/pr" ] && cat "$STATE/pr"; exit 0 ;;
             "pr create") echo 42 > "$STATE/pr"; echo "https://github.com/ci/ci/pull/42" ;;
-            "pr view") case "$*" in *url*) echo "https://github.com/ci/ci/pull/42" ;; *title*) echo "feat: ci" ;; *) cat "$STATE/pr" ;; esac ;;
-            "pr checks") echo "API  pass" ;;
+            "pr view")
+              case "$*" in
+                *headRefOid*) git rev-parse HEAD ;;
+                *url*) echo "https://github.com/ci/ci/pull/42" ;;
+                *title*) echo "feat: ci" ;;
+                *) cat "$STATE/pr" ;;
+              esac ;;
+            "pr checks") [ "${FAIL_CI:-0}" = 1 ] && { echo "API  fail"; exit 1; }; echo "API  pass" ;;
             "pr merge")
-              # mergea en el repo bare, como lo haría GitHub
+              # mergea en el repo bare, como lo haría GitHub; el último argumento es el asunto del merge
               git clone -q -b main "$ORIGIN" "$STATE/merge" && cd "$STATE/merge" &&
-                git merge -q --no-ff origin/feat/ci -m "$6" && git push -q origin main ;;
+                git merge -q --no-ff origin/feat/ci -m "${*: -1}" && git push -q origin main ;;
             *) echo "stub gh refuses: $*" >&2; exit 97 ;;
           esac
           EOF
           # el build falla a propósito: la prueba termina en el paso 4, sin publicar nada
-          printf '#!/usr/bin/env bash\nexit 1\n' > "$RUNNER_TEMP/stubs/npm"
-          chmod +x "$RUNNER_TEMP/stubs/gh" "$RUNNER_TEMP/stubs/npm"
+          printf '#!/usr/bin/env bash\nexit 1\n' > "$RUNNER_TEMP/flow-stubs/npm"
+          chmod +x "$RUNNER_TEMP/flow-stubs/gh" "$RUNNER_TEMP/flow-stubs/npm"
           cd "$RUNNER_TEMP/flow"
           prod=$(git rev-parse --short HEAD)
           git switch -qc feat/ci
           git commit --allow-empty -qm "feat: ci"
+          run_deploy() {
+            PATH="$RUNNER_TEMP/flow-stubs:$RUNNER_TEMP/stubs:$PATH" FAKE_PROD_VERSION="$prod" \
+              PUBLIC_API_URL=https://api.example.com PUBLIC_WEB_URL=https://web.example.com \
+              RAILWAY_PROJECT_ID=ci VERCEL_PROJECT_NAME=ci ./deploy.sh > "$RUNNER_TEMP/flow.txt" 2>&1
+          }
           set +e
-          PATH="$RUNNER_TEMP/stubs:$PATH" FAKE_PROD_VERSION="$prod" PUBLIC_API_URL=https://api.example.com \
-            PUBLIC_WEB_URL=https://web.example.com RAILWAY_PROJECT_ID=ci VERCEL_PROJECT_NAME=ci \
-            ./deploy.sh > "$RUNNER_TEMP/flow.txt" 2>&1
+          # 1) el CI del PR falla: no se mergea nada y la rama sigue en pie
+          FAIL_CI=1 run_deploy
+          code=$?
+          cat "$RUNNER_TEMP/flow.txt"
+          test "$code" -eq 4 || exit 1
+          grep -q "CI failed on pull request" "$RUNNER_TEMP/flow.txt" || exit 1
+          test "$(git -C "$ORIGIN" rev-parse --short main)" = "$prod" || exit 1
+          test "$(git branch --show-current)" = feat/ci || exit 1
+          # 2) el CI pasa: mergea, vuelve a main y continúa con su deploy
+          run_deploy
           code=$?
           cat "$RUNNER_TEMP/flow.txt"
           test "$code" -eq 5 || exit 1

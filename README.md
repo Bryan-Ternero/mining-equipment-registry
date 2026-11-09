@@ -282,7 +282,7 @@ El comando también publica en GitHub, así el repositorio siempre tiene lo que 
 - **Desde `main`**: hace `git push` y despliega.
 - **Desde otra rama**: hace `git push`, abre el pull request contra `main` (o reutiliza el que ya está abierto), espera a que pase el CI, lo mergea, vuelve a `main`, borra la rama y despliega `main`. Si el CI falla, no mergea ni publica nada y el PR queda abierto.
 
-Nunca hace `push --force`: si GitHub tiene commits que la copia local no tiene, se detiene y pide `git pull`. Para abrir y mergear el PR usa la [GitHub CLI](https://cli.github.com) (`gh auth login`).
+Nunca hace `push --force`: si GitHub tiene commits que la copia local no tiene, se detiene y pide `git pull`. Solo mergea el PR si apunta exactamente al commit local y nadie subió otro después del CI; el CI tiene 30 minutos para terminar (`DEPLOY_CI_TIMEOUT`). Desde una rama no acepta cambios sin commitear, porque no viajarían en el PR. Para abrir y mergear el PR usa la [GitHub CLI](https://cli.github.com) (`gh auth login`).
 
 Opciones: `--no-push` solo despliega (no sube nada y exige que el commit ya esté en GitHub), `--allow-dirty` publica cambios sin commitear y `--allow-downgrade` permite, a propósito, publicar un commit anterior al que corre en producción.
 

@@ -40,6 +40,7 @@ NO_PUSH=0
 ARGS=("$@")
 BASE_BRANCH=main
 CHECKS_APPEAR_TIMEOUT="${DEPLOY_CHECKS_APPEAR_TIMEOUT:-120}"
+CI_TIMEOUT="${DEPLOY_CI_TIMEOUT:-1800}"
 for arg in "$@"; do
   case "$arg" in
     --allow-dirty) ALLOW_DIRTY=1 ;;
@@ -96,9 +97,18 @@ try {
 # --no-push. Ese exec es intencional: bash lee el script mientras lo ejecuta y git switch puede
 # cambiar este archivo en disco, así que el resto del deploy no debe seguir leyendo de él.
 publish_to_github() {
-  local branch pr title body url checks waited=0
-  branch="$(git symbolic-ref --quiet --short HEAD 2>/dev/null)" ||
-    fail "HEAD is detached: check out main or a branch to publish it to GitHub, or run ./deploy.sh --no-push." 4
+  local branch sha pr title body url checks code waited=0
+  # un commit suelto (HEAD detached) no tiene rama que subir: se despliega solo si ya está en GitHub
+  if ! branch="$(git symbolic-ref --quiet --short HEAD 2>/dev/null)"; then
+    warn "HEAD is detached: nothing to push, the commit must already be on GitHub"
+    return 0
+  fi
+  sha="$(git rev-parse HEAD)"
+  # los cambios sin commit no viajan en el PR: desplegarlos sobre main publicaría algo que nadie revisó
+  if [ "$branch" != "$BASE_BRANCH" ] && [ -n "$(git status --porcelain -- apps scripts deploy.sh)" ]; then
+    fail "There are uncommitted changes on '$branch': they would not be part of the pull request.
+       Commit them, or deploy them from $BASE_BRANCH with --allow-dirty." 4
+  fi
 
   # nunca se fuerza el push: si GitHub tiene commits que esta copia no tiene, se rechaza
   git push --quiet -u origin "$branch" ||
@@ -128,6 +138,9 @@ $(git log --reverse --format='- %s' "origin/$BASE_BRANCH..HEAD")"
     ok "reusing the open pull request #$pr"
   fi
   url="$(gh pr view "$pr" --json url --jq .url 2>/dev/null || printf '#%s' "$pr")"
+  # el PR tiene que apuntar exactamente a este commit (descarta un PR de un fork con el mismo nombre de rama)
+  [ "$(gh pr view "$pr" --json headRefOid --jq .headRefOid 2>/dev/null)" = "$sha" ] ||
+    fail "Pull request $url does not point to commit ${sha:0:7}: refusing to merge it. Check it on GitHub." 4
 
   # GitHub tarda unos segundos en registrar los checks de un push nuevo
   while :; do
@@ -139,13 +152,30 @@ $(git log --reverse --format='- %s' "origin/$BASE_BRANCH..HEAD")"
     waited=$((waited + 5))
   done
   printf '    ...   waiting for CI on %s\n' "$url"
-  gh pr checks "$pr" --watch --interval 10 ||
-    fail "CI failed on pull request $url: nothing was merged or published, the pull request stays open.
+  code=0
+  if command -v timeout >/dev/null 2>&1; then
+    timeout "$CI_TIMEOUT" gh pr checks "$pr" --watch --interval 10 || code=$?
+  else
+    gh pr checks "$pr" --watch --interval 10 || code=$?
+  fi
+  if [ "$code" -eq 124 ]; then
+    fail "CI on pull request $url did not finish within ${CI_TIMEOUT}s: nothing was merged or published." 4
+  elif [ "$code" -ne 0 ]; then
+    # gh también termina con error si no pudo leer el estado: solo se culpa al CI si hay checks fallidos
+    checks="$(gh pr checks "$pr" 2>&1 || true)"
+    case "$checks" in
+      *fail*)
+        fail "CI failed on pull request $url: nothing was merged or published, the pull request stays open.
        Fix it on '$branch' and run ./deploy.sh again." 4
+        ;;
+      *) fail "Could not read the CI state of pull request $url (gh pr checks). Nothing was merged; retry ./deploy.sh." 3 ;;
+    esac
+  fi
   ok "CI passed"
 
   title="$(gh pr view "$pr" --json title --jq .title)"
-  gh pr merge "$pr" --merge --subject "Merge pull request #$pr: $title" ||
+  # --match-head-commit: si alguien subió otro commit después del CI, GitHub rechaza el merge
+  gh pr merge "$pr" --merge --match-head-commit "$sha" --subject "Merge pull request #$pr: $title" ||
     fail "Pull request $url could not be merged (conflicts or branch rules). It stays open; nothing was published." 4
   ok "pull request #$pr merged into $BASE_BRANCH"
 
