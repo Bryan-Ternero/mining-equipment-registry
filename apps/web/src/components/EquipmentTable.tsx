@@ -14,8 +14,9 @@ const canHover = typeof window !== 'undefined' && window.matchMedia?.('(hover: h
 const CARD_WIDTH = 300;
 const CARD_HEIGHT = 250;
 
+// se guarda solo el id: los datos se leen de la lista actual, así la tarjeta nunca muestra una copia vieja
 interface Peek {
-  equipment: Equipment;
+  id: string;
   top: number;
   left: number;
 }
@@ -47,8 +48,10 @@ export function EquipmentTable({ equipment, role, onEdit, onMaintenance, onDelet
     if (!cell) return;
     const left = Math.min(cell.right + 12, window.innerWidth - CARD_WIDTH - 12);
     const top = Math.max(12, Math.min(cell.top, window.innerHeight - CARD_HEIGHT - 12));
-    setPeek({ equipment: row, top, left });
+    setPeek({ id: row.id, top, left });
   }
+
+  const peeked = peek ? equipment.find((row) => row.id === peek.id) : undefined;
 
   return (
     <div className="table-wrap">
@@ -169,10 +172,10 @@ export function EquipmentTable({ equipment, role, onEdit, onMaintenance, onDelet
           })}
         </tbody>
       </table>
-      {peek && expandedId !== peek.equipment.id && (
+      {peek && peeked && expandedId !== peeked.id && (
         <div className="details-card" style={{ top: peek.top, left: peek.left, width: CARD_WIDTH }} role="tooltip">
-          <strong className="details-card-title">{peek.equipment.code}</strong>
-          <EquipmentDetails equipment={peek.equipment} />
+          <strong className="details-card-title">{peeked.code}</strong>
+          <EquipmentDetails equipment={peeked} />
         </div>
       )}
     </div>

@@ -38,9 +38,15 @@ describe('equipment details: last maintenance and count', () => {
       lastMaintenance: { hourmeter: 500, notes: 'Cambio de aceite', performedBy: 'jefe', performedAt: '2026-11-01T10:00:00.000Z' },
     });
 
+    // un registro más antiguo cargado después (directo en la base) no debe desplazar al más reciente:
+    // el "último" se elige por fecha, no por orden de carga
+    await db.maintenanceRecord.create({
+      data: { equipmentId: truck.id, hourmeter: 100, performedAt: new Date('2026-09-01T10:00:00Z'), notes: 'Carga tardía' },
+    });
+
     const list = await inject({ method: 'GET', url: '/api/equipment' });
     const row = list.json().find((e: { code: string }) => e.code === 'CAM-DET');
-    expect(row).toMatchObject({ maintenanceCount: 2, lastMaintenance: { hourmeter: 500, notes: 'Cambio de aceite' } });
+    expect(row).toMatchObject({ maintenanceCount: 3, lastMaintenance: { hourmeter: 500, notes: 'Cambio de aceite' } });
   });
 });
 
