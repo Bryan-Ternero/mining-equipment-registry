@@ -266,7 +266,8 @@ Levanta en orden PostgreSQL → migraciones → API (<http://localhost:8081>) �
 
 GitHub Actions ([`ci.yml`](.github/workflows/ci.yml)) corre todo lo anterior en cada push y PR,
 aplica las migraciones sobre una base limpia, pasa ShellCheck sobre `deploy.sh` y comprueba que
-el script falle con código `2` cuando faltan variables o herramientas.
+el script falle con código `2` cuando faltan variables o herramientas. También prueba, contra un
+repositorio local y una `gh` falsa, el flujo desde una rama: push, PR, CI, merge y deploy de `main`.
 
 ---
 
@@ -276,7 +277,14 @@ el script falle con código `2` cuando faltan variables o herramientas.
 ./deploy.sh          # o: npm run deploy
 ```
 
-Opciones: `--allow-dirty` publica cambios sin commitear y `--allow-downgrade` permite, a propósito, publicar un commit anterior al que corre en producción.
+El comando también publica en GitHub, así el repositorio siempre tiene lo que corre en producción:
+
+- **Desde `main`**: hace `git push` y despliega.
+- **Desde otra rama**: hace `git push`, abre el pull request contra `main` (o reutiliza el que ya está abierto), espera a que pase el CI, lo mergea, vuelve a `main`, borra la rama y despliega `main`. Si el CI falla, no mergea ni publica nada y el PR queda abierto.
+
+Nunca hace `push --force`: si GitHub tiene commits que la copia local no tiene, se detiene y pide `git pull`. Solo mergea el PR si apunta exactamente al commit local y nadie subió otro después del CI; el CI tiene 30 minutos para terminar (`DEPLOY_CI_TIMEOUT`). Desde una rama no acepta cambios sin commitear, porque no viajarían en el PR. Para abrir y mergear el PR usa la [GitHub CLI](https://cli.github.com) (`gh auth login`).
+
+Opciones: `--no-push` solo despliega (no sube nada y exige que el commit ya esté en GitHub), `--allow-dirty` publica cambios sin commitear y `--allow-downgrade` permite, a propósito, publicar un commit anterior al que corre en producción.
 
 ### Qué hace, paso a paso
 
@@ -284,7 +292,7 @@ Opciones: `--allow-dirty` publica cambios sin commitear y `--allow-downgrade` pe
 |---|---|---|
 | 1. Preflight | Verifica `node`, `npm`, `git`, `curl`, `railway` y `vercel`, y las variables `PUBLIC_API_URL`, `PUBLIC_WEB_URL`, `RAILWAY_PROJECT_ID` y `VERCEL_PROJECT_NAME`. Lista **todo** lo que falta de una vez. | sale con `2` |
 | 2. Autenticación | Confirma la sesión de Railway y Vercel, vincula el proyecto de Vercel y comprueba que la API tenga sus cuentas de login cargadas en Railway (sin ellas no arranca). | `3`, `2` |
-| 3. Estado actual | Toma el commit a publicar, rechaza cambios sin commitear en `apps/`, `scripts/` o `deploy.sh` y exige que ese commit **ya esté en GitHub** (`git push` antes de desplegar), así producción nunca corre código que el repositorio no tiene. Registra la versión que está viva (destino del rollback) y **se niega a volver atrás**: si el commit no contiene lo que corre en producción, frena, porque las migraciones no se revierten y la base quedaría adelantada al código. | `4`, `3` |
+| 3. Estado actual | Toma el commit a publicar, rechaza cambios sin commitear en `apps/`, `scripts/` o `deploy.sh` y lo sube a GitHub (desde una rama: PR, CI y merge, como se explica arriba); con `--no-push` exige que ya esté subido. Así producción nunca corre código que el repositorio no tiene. Registra la versión que está viva (destino del rollback) y **se niega a volver atrás**: si el commit no contiene lo que corre en producción, frena, porque las migraciones no se revierten y la base quedaría adelantada al código. | `4`, `3` |
 | 4. Build local | `npm ci` y build de la API y del frontend. Un error de compilación no llega a producción. | `5` |
 | 5. Migraciones | `prisma migrate deploy` contra la base de Railway, a través de su proxy TCP. Solo aplica las pendientes. | `6` |
 | 6. Publicación | Publica la API en Railway y espera el estado `SUCCESS` de **ese** deployment. Publica el frontend en Vercel **sin dominio**, lo verifica y recién entonces lo promueve a la URL pública. | `7`, `8` |
@@ -317,8 +325,8 @@ DEPLOY_SIMULATE_FAILURE=verify ./deploy.sh
 |---|---|
 | `0` | Desplegado y verificado |
 | `2` | Faltan herramientas o variables, o el argumento es inválido |
-| `3` | Railway o Vercel sin autenticar, o GitHub inaccesible |
-| `4` | Cambios sin commitear en lo que se publica, el commit todavía no está en GitHub, o publicarlo llevaría producción a una versión anterior |
+| `3` | Railway, Vercel o GitHub CLI sin autenticar, o GitHub inaccesible |
+| `4` | Cambios sin commitear en lo que se publica, GitHub rechazó el push, el CI del PR falló o no se pudo mergear, el commit no está en GitHub (`--no-push`), o publicarlo llevaría producción a una versión anterior |
 | `5` | Falló el build local (no se publicó nada) |
 | `6` | Fallaron las migraciones (no se publicó nada) |
 | `7` | Falló la publicación de la API (producción sigue en la versión anterior) |
@@ -333,7 +341,7 @@ la terminal. Las credenciales de la base **no** se guardan en ningún archivo: e
 de Railway en cada corrida.
 
 ```bash
-railway login && vercel login
+railway login && vercel login && gh auth login
 
 railway init --name mining-equipment-registry
 railway add --database postgres

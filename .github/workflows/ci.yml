@@ -127,7 +127,7 @@ jobs:
           git -c user.name=ci -c user.email=ci@example.com commit --allow-empty -qm "ci: local commit that is not pushed"
           set +e
           PATH="$RUNNER_TEMP/stubs:$PATH" PUBLIC_API_URL=https://api.example.com PUBLIC_WEB_URL=https://web.example.com \
-            RAILWAY_PROJECT_ID=ci VERCEL_PROJECT_NAME=ci ./deploy.sh > out.txt 2>&1
+            RAILWAY_PROJECT_ID=ci VERCEL_PROJECT_NAME=ci ./deploy.sh --no-push > out.txt 2>&1
           code=$?
           cat out.txt
           test "$code" -eq 4 || exit 1
@@ -148,11 +148,74 @@ jobs:
           set +e
           PATH="$RUNNER_TEMP/stubs:$PATH" FAKE_PROD_VERSION="$prod" PUBLIC_API_URL=https://api.example.com \
             PUBLIC_WEB_URL=https://web.example.com RAILWAY_PROJECT_ID=ci VERCEL_PROJECT_NAME=ci \
-            ./deploy.sh --allow-dirty > "$RUNNER_TEMP/downgrade.txt" 2>&1
+            ./deploy.sh --no-push --allow-dirty > "$RUNNER_TEMP/downgrade.txt" 2>&1
           code=$?
           cat "$RUNNER_TEMP/downgrade.txt"
           test "$code" -eq 4 || exit 1
           grep -q "is not part of the history" "$RUNNER_TEMP/downgrade.txt"
+      - name: From a branch, pushes, opens the PR, waits for CI, merges and deploys main
+        run: |
+          # origin es un repo bare local y gh es falso: nada sale de este runner
+          export GIT_AUTHOR_NAME=ci GIT_AUTHOR_EMAIL=ci@example.com GIT_COMMITTER_NAME=ci GIT_COMMITTER_EMAIL=ci@example.com
+          export STATE="$RUNNER_TEMP/gh-state" ORIGIN="$RUNNER_TEMP/origin.git"
+          mkdir -p "$STATE"
+          git init -q --bare "$ORIGIN"
+          git push -q "$ORIGIN" HEAD:refs/heads/main
+          git clone -q -b main "$ORIGIN" "$RUNNER_TEMP/flow"
+          # gh y npm falsos en su propia carpeta, para no alterar los stubs de los otros pasos
+          mkdir -p "$RUNNER_TEMP/flow-stubs"
+          cat > "$RUNNER_TEMP/flow-stubs/gh" <<'EOF'
+          #!/usr/bin/env bash
+          case "$1 $2" in
+            "auth status") exit 0 ;;
+            "pr list") [ -f "$STATE/pr" ] && cat "$STATE/pr"; exit 0 ;;
+            "pr create") echo 42 > "$STATE/pr"; echo "https://github.com/ci/ci/pull/42" ;;
+            "pr view")
+              case "$*" in
+                *headRefOid*) git rev-parse HEAD ;;
+                *url*) echo "https://github.com/ci/ci/pull/42" ;;
+                *title*) echo "feat: ci" ;;
+                *) cat "$STATE/pr" ;;
+              esac ;;
+            "pr checks") [ "${FAIL_CI:-0}" = 1 ] && { echo "API  fail"; exit 1; }; echo "API  pass" ;;
+            "pr merge")
+              # mergea en el repo bare, como lo haría GitHub; el último argumento es el asunto del merge
+              git clone -q -b main "$ORIGIN" "$STATE/merge" && cd "$STATE/merge" &&
+                git merge -q --no-ff origin/feat/ci -m "${*: -1}" && git push -q origin main ;;
+            *) echo "stub gh refuses: $*" >&2; exit 97 ;;
+          esac
+          EOF
+          # el build falla a propósito: la prueba termina en el paso 4, sin publicar nada
+          printf '#!/usr/bin/env bash\nexit 1\n' > "$RUNNER_TEMP/flow-stubs/npm"
+          chmod +x "$RUNNER_TEMP/flow-stubs/gh" "$RUNNER_TEMP/flow-stubs/npm"
+          cd "$RUNNER_TEMP/flow"
+          prod=$(git rev-parse --short HEAD)
+          git switch -qc feat/ci
+          git commit --allow-empty -qm "feat: ci"
+          run_deploy() {
+            PATH="$RUNNER_TEMP/flow-stubs:$RUNNER_TEMP/stubs:$PATH" FAKE_PROD_VERSION="$prod" \
+              PUBLIC_API_URL=https://api.example.com PUBLIC_WEB_URL=https://web.example.com \
+              RAILWAY_PROJECT_ID=ci VERCEL_PROJECT_NAME=ci ./deploy.sh > "$RUNNER_TEMP/flow.txt" 2>&1
+          }
+          set +e
+          # 1) el CI del PR falla: no se mergea nada y la rama sigue en pie
+          FAIL_CI=1 run_deploy
+          code=$?
+          cat "$RUNNER_TEMP/flow.txt"
+          test "$code" -eq 4 || exit 1
+          grep -q "CI failed on pull request" "$RUNNER_TEMP/flow.txt" || exit 1
+          test "$(git -C "$ORIGIN" rev-parse --short main)" = "$prod" || exit 1
+          test "$(git branch --show-current)" = feat/ci || exit 1
+          # 2) el CI pasa: mergea, vuelve a main y continúa con su deploy
+          run_deploy
+          code=$?
+          cat "$RUNNER_TEMP/flow.txt"
+          test "$code" -eq 5 || exit 1
+          grep -q "pull request #42 merged into main" "$RUNNER_TEMP/flow.txt"
+          grep -q "now on main" "$RUNNER_TEMP/flow.txt"
+          test "$(git branch --show-current)" = main
+          test "$(git rev-parse HEAD)" = "$(git -C "$ORIGIN" rev-parse main)"
+          test -z "$(git -C "$ORIGIN" branch --list feat/ci)"
       - name: Verifier refuses an invalid retry count
         run: |
           set +e
