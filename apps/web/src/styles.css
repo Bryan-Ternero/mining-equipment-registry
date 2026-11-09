@@ -1009,3 +1009,76 @@ textarea {
 .fatal-card .form-actions {
   justify-content: center;
 }
+
+/* ---------------------------------------------------------------- detalle del equipo */
+/* botón ⓘ junto al código: despliega el detalle debajo de la fila (celular y teclado) */
+.details-toggle {
+  margin-left: auto;
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
+.details-toggle.active {
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+/* fila desplegable con el detalle, debajo del equipo */
+.details-row td {
+  background: #fafcfe;
+  padding: 0.75rem 1.5rem 1rem;
+}
+
+/* tarjeta flotante al pasar el mouse (escritorio); posición fija para que el scroll de la tabla no la recorte */
+.details-card {
+  position: fixed;
+  z-index: 20;
+  padding: 0.9rem 1rem;
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border);
+  pointer-events: none;
+}
+
+.details-card-title {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: var(--heading);
+  font-size: 0.9rem;
+}
+
+.details-list {
+  margin: 0;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.details-item {
+  display: grid;
+  grid-template-columns: 9.5rem 1fr;
+  gap: 0.75rem;
+  font-size: 0.8125rem;
+}
+
+.details-item dt {
+  color: var(--muted);
+}
+
+.details-item dd {
+  margin: 0;
+  color: var(--heading);
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 720px) {
+  .table .details-row td {
+    display: block;
+    text-align: left;
+    padding: 0.75rem 0 0.25rem;
+  }
+
+  .details-item {
+    grid-template-columns: 8.5rem 1fr;
+  }
+}

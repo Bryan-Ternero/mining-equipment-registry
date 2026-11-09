@@ -155,6 +155,13 @@ export const EyeOffIcon = (p: P) => (
   </Icon>
 );
 
+export const InfoIcon = (p: P) => (
+  <Icon {...p}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 11v5M12 8v.01" />
+  </Icon>
+);
+
 export const CloseIcon = (p: P) => (
   <Icon {...p}>
     <path d="M6 6l12 12M18 6L6 18" />

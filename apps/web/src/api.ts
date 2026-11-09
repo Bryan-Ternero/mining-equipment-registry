@@ -26,6 +26,9 @@ export interface Equipment {
   hoursSinceService: number;
   hoursUntilMaintenance: number;
   requiresMaintenance: boolean;
+  /** el último mantenimiento registrado, o null si el equipo nunca tuvo uno */
+  lastMaintenance: Maintenance | null;
+  maintenanceCount: number;
   createdAt: string;
   updatedAt: string;
 }
