@@ -8,7 +8,13 @@ import { maintenanceStatus } from '../domain/maintenance.js';
 import { AppError, conflict, invalid, notFound } from '../errors.js';
 import type { CreateEquipmentInput, CreateMaintenanceInput, UpdateEquipmentInput } from '../schemas.js';
 
-const withType = { type: true } as const;
+// lo que se carga con cada equipo: su tipo, su último mantenimiento (por fecha) y cuántos tiene.
+// Todas las consultas de equipos usan este include, así la API responde siempre la misma forma.
+const withType = {
+  type: true,
+  maintenances: { orderBy: [{ performedAt: 'desc' }, { createdAt: 'desc' }], take: 1 },
+  _count: { select: { maintenances: true } },
+} as const satisfies Prisma.EquipmentInclude;
 type EquipmentRow = Prisma.EquipmentGetPayload<{ include: typeof withType }>;
 type MaintenanceRow = Prisma.MaintenanceRecordGetPayload<object>;
 
@@ -26,6 +32,9 @@ export function toEquipmentDto(row: EquipmentRow) {
     hourmeter,
     lastServiceHours,
     ...maintenanceStatus({ hourmeter, lastServiceHours, intervalHours }),
+    // el último servicio registrado (null si nunca tuvo uno) y cuántos tiene en total
+    lastMaintenance: row.maintenances[0] ? toMaintenanceDto(row.maintenances[0]) : null,
+    maintenanceCount: row._count.maintenances,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };

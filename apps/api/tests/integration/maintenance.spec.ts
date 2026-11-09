@@ -20,6 +20,36 @@ describe('maintenance warning', () => {
   });
 });
 
+describe('equipment details: last maintenance and count', () => {
+  it('starts with no last maintenance and a count of 0', async () => {
+    const truck = await createEquipment({ code: 'CAM-DET0', typeCode: 'CAMION', hourmeter: 10 });
+    expect(truck).toMatchObject({ lastMaintenance: null, maintenanceCount: 0 });
+    expect(typeof truck.createdAt).toBe('string');
+  });
+
+  it('returns the latest service (by date) and the count, in the list and after registering', async () => {
+    const truck = await createEquipment({ code: 'CAM-DET', typeCode: 'CAMION', hourmeter: 0 });
+    await register(truck.id, { hourmeter: 250, performedAt: '2026-10-01T10:00:00Z', notes: 'Primer servicio' });
+    const second = await register(truck.id, { hourmeter: 500, performedAt: '2026-11-01T10:00:00Z', notes: 'Cambio de aceite' });
+
+    // the registration answer already carries the new last maintenance
+    expect(second.json().equipment).toMatchObject({
+      maintenanceCount: 2,
+      lastMaintenance: { hourmeter: 500, notes: 'Cambio de aceite', performedBy: 'jefe', performedAt: '2026-11-01T10:00:00.000Z' },
+    });
+
+    // un registro más antiguo cargado después (directo en la base) no debe desplazar al más reciente:
+    // el "último" se elige por fecha, no por orden de carga
+    await db.maintenanceRecord.create({
+      data: { equipmentId: truck.id, hourmeter: 100, performedAt: new Date('2026-09-01T10:00:00Z'), notes: 'Carga tardía' },
+    });
+
+    const list = await inject({ method: 'GET', url: '/api/equipment' });
+    const row = list.json().find((e: { code: string }) => e.code === 'CAM-DET');
+    expect(row).toMatchObject({ maintenanceCount: 3, lastMaintenance: { hourmeter: 500, notes: 'Cambio de aceite' } });
+  });
+});
+
 describe('registering a maintenance', () => {
   it('leaves history and restarts the cycle from the current reading', async () => {
     const truck = await createEquipment({ code: 'CAM-2', typeCode: 'CAMION', hourmeter: 280 });
