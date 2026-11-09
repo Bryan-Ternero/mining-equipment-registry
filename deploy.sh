@@ -2,7 +2,9 @@
 #
 # Deploy con un solo comando: ./deploy.sh   (o: npm run deploy)
 #
-#   ./deploy.sh                despliega el commit actual
+#   ./deploy.sh                sube a GitHub y despliega: desde main hace push; desde otra rama hace
+#                              push, abre (o reutiliza) el PR, espera el CI, mergea y despliega main
+#   ./deploy.sh --no-push      solo despliega: exige que el commit ya esté en GitHub (no sube nada)
 #   ./deploy.sh --allow-dirty  despliega cambios sin commit (/health sigue informando el commit HEAD)
 #   ./deploy.sh --allow-downgrade  despliega un commit que no contiene lo que corre en producción
 #   ./deploy.sh --help         muestra esta ayuda
@@ -13,8 +15,8 @@
 #   0  desplegado y verificado
 #   2  preflight: falta una herramienta o una variable, o hay un argumento inválido
 #   3  Railway, Vercel o GitHub no responden o no hay sesión iniciada
-#   4  hay cambios sin commit en lo que se publica, el commit no está subido a GitHub, o
-#      llevaría producción de vuelta a una versión anterior
+#   4  hay cambios sin commit en lo que se publica, GitHub rechazó el push, el CI del PR falló o no
+#      se pudo mergear, o llevaría producción de vuelta a una versión anterior
 #   5  falló el build local (no se publicó nada)
 #   6  fallaron las migraciones de la base de datos (no se publicó nada)
 #   7  falló la publicación de la API (producción conserva la API anterior)
@@ -34,12 +36,17 @@ cd "$ROOT"
 
 ALLOW_DIRTY=0
 ALLOW_DOWNGRADE=0
+NO_PUSH=0
+ARGS=("$@")
+BASE_BRANCH=main
+CHECKS_APPEAR_TIMEOUT="${DEPLOY_CHECKS_APPEAR_TIMEOUT:-120}"
 for arg in "$@"; do
   case "$arg" in
     --allow-dirty) ALLOW_DIRTY=1 ;;
     --allow-downgrade) ALLOW_DOWNGRADE=1 ;;
+    --no-push) NO_PUSH=1 ;;
     -h | --help)
-      sed -n '2,29p' "$0" | sed 's/^# \{0,1\}//'
+      sed -n '2,31p' "$0" | sed 's/^# \{0,1\}//'
       exit 0
       ;;
     *)
@@ -84,6 +91,74 @@ try {
 ' "$1" "$2"
 }
 
+# Sube el commit actual a GitHub. Desde main hace push y vuelve. Desde otra rama hace push, abre (o
+# reutiliza) el PR contra main, espera el CI, mergea y vuelve a ejecutar el deploy.sh de main con
+# --no-push. Ese exec es intencional: bash lee el script mientras lo ejecuta y git switch puede
+# cambiar este archivo en disco, así que el resto del deploy no debe seguir leyendo de él.
+publish_to_github() {
+  local branch pr title body url checks waited=0
+  branch="$(git symbolic-ref --quiet --short HEAD 2>/dev/null)" ||
+    fail "HEAD is detached: check out main or a branch to publish it to GitHub, or run ./deploy.sh --no-push." 4
+
+  # nunca se fuerza el push: si GitHub tiene commits que esta copia no tiene, se rechaza
+  git push --quiet -u origin "$branch" ||
+    fail "GitHub rejected the push of '$branch' (it has commits this copy does not have).
+       Run git pull, resolve any conflict, and run ./deploy.sh again." 4
+  ok "pushed '$branch' to GitHub"
+  [ "$branch" = "$BASE_BRANCH" ] && return 0
+
+  if [ "$(git rev-list --count "origin/$BASE_BRANCH..HEAD")" -eq 0 ]; then
+    ok "'$branch' has nothing that $BASE_BRANCH lacks: no pull request needed"
+    return 0
+  fi
+
+  pr="$(gh pr list --head "$branch" --base "$BASE_BRANCH" --state open --json number --jq '.[0].number' 2>/dev/null)" ||
+    fail "Could not query the pull requests on GitHub (gh pr list). Check 'gh auth status' and retry." 3
+  if [ -z "$pr" ]; then
+    title="$(git log --reverse --format=%s "origin/$BASE_BRANCH..HEAD" | head -n1)"
+    body="Abierto por deploy.sh para publicar la rama '$branch'.
+
+Commits:
+$(git log --reverse --format='- %s' "origin/$BASE_BRANCH..HEAD")"
+    gh pr create --base "$BASE_BRANCH" --head "$branch" --title "$title" --body "$body" >/dev/null ||
+      fail "Could not open the pull request for '$branch' on GitHub (gh pr create)." 3
+    pr="$(gh pr view "$branch" --json number --jq .number)"
+    ok "pull request #$pr opened"
+  else
+    ok "reusing the open pull request #$pr"
+  fi
+  url="$(gh pr view "$pr" --json url --jq .url 2>/dev/null || printf '#%s' "$pr")"
+
+  # GitHub tarda unos segundos en registrar los checks de un push nuevo
+  while :; do
+    checks="$(gh pr checks "$pr" 2>&1 || true)"
+    case "$checks" in *"no checks reported"*) ;; *) break ;; esac
+    [ "$waited" -lt "$CHECKS_APPEAR_TIMEOUT" ] ||
+      fail "No CI checks appeared on pull request $url after ${CHECKS_APPEAR_TIMEOUT}s. Nothing was merged or published." 4
+    sleep 5
+    waited=$((waited + 5))
+  done
+  printf '    ...   waiting for CI on %s\n' "$url"
+  gh pr checks "$pr" --watch --interval 10 ||
+    fail "CI failed on pull request $url: nothing was merged or published, the pull request stays open.
+       Fix it on '$branch' and run ./deploy.sh again." 4
+  ok "CI passed"
+
+  title="$(gh pr view "$pr" --json title --jq .title)"
+  gh pr merge "$pr" --merge --subject "Merge pull request #$pr: $title" ||
+    fail "Pull request $url could not be merged (conflicts or branch rules). It stays open; nothing was published." 4
+  ok "pull request #$pr merged into $BASE_BRANCH"
+
+  git switch --quiet "$BASE_BRANCH" ||
+    fail "Merged, but could not switch to $BASE_BRANCH. Switch manually and run ./deploy.sh --no-push." 4
+  git pull --quiet --ff-only origin "$BASE_BRANCH" ||
+    fail "Merged, but could not update the local $BASE_BRANCH (git pull --ff-only). Update it and run ./deploy.sh --no-push." 4
+  git push --quiet origin --delete "$branch" >/dev/null 2>&1 || true
+  git branch --quiet -d "$branch" 2>/dev/null || warn "kept the local branch '$branch'"
+  ok "now on $BASE_BRANCH at $(git rev-parse --short HEAD), continuing with its deploy"
+  exec "$ROOT/deploy.sh" --no-push "${ARGS[@]+"${ARGS[@]}"}"
+}
+
 # ---------------------------------------------------------------------------
 step "1/7 Preflight: tools and environment variables"
 
@@ -110,7 +185,12 @@ problems=()
 for name in PUBLIC_API_URL PUBLIC_WEB_URL RAILWAY_PROJECT_ID VERCEL_PROJECT_NAME; do
   [ -n "${!name:-}" ] || problems+=("variable $name")
 done
-for tool in node npm git curl railway vercel; do
+# gh solo hace falta para abrir y mergear el pull request, es decir al publicar desde una rama que no es main
+NEEDS_GH=0
+if [ "$NO_PUSH" -eq 0 ] && [ "$(git symbolic-ref --quiet --short HEAD 2>/dev/null)" != "$BASE_BRANCH" ]; then NEEDS_GH=1; fi
+tools=(node npm git curl railway vercel)
+[ "$NEEDS_GH" -eq 0 ] || tools+=(gh)
+for tool in "${tools[@]}"; do
   command -v "$tool" >/dev/null 2>&1 || problems+=("tool $tool")
 done
 if [ -n "$SIMULATE" ] && [ "$SIMULATE" != "verify" ]; then
@@ -158,6 +238,12 @@ if [ "${#missing_auth[@]}" -gt 0 ]; then
 fi
 ok "login accounts configured in Railway"
 
+if [ "$NEEDS_GH" -eq 1 ]; then
+  gh auth status >/dev/null 2>&1 ||
+    fail "GitHub CLI is not authenticated. Run 'gh auth login', or use ./deploy.sh --no-push." 3
+  ok "GitHub CLI authenticated"
+fi
+
 # ---------------------------------------------------------------------------
 step "3/7 Version and current production state"
 
@@ -174,6 +260,8 @@ fi
 # lo que sale a producción también debe estar en GitHub, así el repositorio siempre muestra lo que corre en producción
 git fetch --quiet origin 2>/dev/null ||
   fail "Could not reach GitHub (git fetch origin) to check that $VERSION is pushed. Check the connection and retry." 3
+# sin --no-push primero se sube; desde una rama esto termina en el deploy de main (ver publish_to_github)
+[ "$NO_PUSH" -eq 1 ] || publish_to_github
 if [ -z "$(git branch --remotes --contains HEAD 2>/dev/null)" ]; then
   fail "Commit $VERSION is not on GitHub yet: production would run code the repository does not have.
        Push it first (git push), then run ./deploy.sh again." 4
