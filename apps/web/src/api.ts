@@ -1,7 +1,7 @@
 import type { Session } from './auth/session';
 
 // CARGADOR es temporal (prueba de deploy)
-export type TypeCode = 'CAMION' | 'EXCAVADORA' | 'PERFORADORA' | 'CARGADOR';
+export type TypeCode = 'CAMION' | 'EXCAVADORA' | 'PERFORADORA' | 'CARGADOR' | 'DRAGA';
 
 /**
  * Un código de tipo tal como lo envía la API. El catálogo vive en la base de datos y puede ir por

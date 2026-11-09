@@ -1,4 +1,4 @@
-  import type { SVGProps } from 'react';
+import type { SVGProps } from 'react';
 import type { TypeCode } from '../api';
 
 /** pequeño conjunto de iconos en línea (cuadrícula de 24px, iconos de trazo) para no incluir una fuente de iconos */
@@ -64,6 +64,7 @@ export const GenericEquipmentIcon = (p: P) => (
     <circle cx="16" cy="19" r="1.5" />
   </Icon>
 );
+
 /** draga: casco flotante con su brazo y la cuchara de dragado */
 export const DredgeIcon = (p: P) => (
   <Icon {...p}>

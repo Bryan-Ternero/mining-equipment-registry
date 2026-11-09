@@ -8,6 +8,7 @@ describe('equipment types', () => {
     expect(res.json()).toEqual([
       { code: 'CAMION', name: 'Camión', maintenanceIntervalHours: 250 },
       { code: 'CARGADOR', name: 'Cargador frontal', maintenanceIntervalHours: 400 },
+      { code: 'DRAGA', name: 'Draga', maintenanceIntervalHours: 600 },
       { code: 'EXCAVADORA', name: 'Excavadora', maintenanceIntervalHours: 500 },
       { code: 'PERFORADORA', name: 'Perforadora', maintenanceIntervalHours: 300 },
     ]);
