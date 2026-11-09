@@ -1,4 +1,4 @@
-import type { SVGProps } from 'react';
+  import type { SVGProps } from 'react';
 import type { TypeCode } from '../api';
 
 /** pequeño conjunto de iconos en línea (cuadrícula de 24px, iconos de trazo) para no incluir una fuente de iconos */
@@ -64,12 +64,22 @@ export const GenericEquipmentIcon = (p: P) => (
     <circle cx="16" cy="19" r="1.5" />
   </Icon>
 );
+/** draga: casco flotante con su brazo y la cuchara de dragado */
+export const DredgeIcon = (p: P) => (
+  <Icon {...p}>
+    <path d="M2 17h14l-2 3H4z" />
+    <path d="M5 17v-4h6v4M8 13V9" />
+    <path d="M11 13l6-6 4 3" />
+    <path d="M21 10v3h-3" />
+  </Icon>
+);
 
 export const typeIcon: Record<TypeCode, (p: P) => React.JSX.Element> = {
   CAMION: TruckIcon,
   EXCAVADORA: ExcavatorIcon,
   PERFORADORA: DrillIcon,
   CARGADOR: LoaderIcon,
+  DRAGA: DredgeIcon,
 };
 
 /**

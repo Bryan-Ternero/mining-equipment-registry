@@ -1,4 +1,4 @@
-/**
+  /**
  * Validación de peticiones con zod. Los mensajes están en español porque el frontend los muestra tal
  * como llegan, y todos los campos inválidos se informan a la vez (400 con una entrada por campo).
  */
@@ -25,8 +25,8 @@ const code = z
   .regex(/^[A-Z0-9][A-Z0-9-]*$/, 'Solo letras, números y guiones (ej. CAM-001).');
 
 // CARGADOR es temporal (prueba de deploy, ver la migración 20261108160000_add_loader_type)
-const typeCode = z.enum(['CAMION', 'EXCAVADORA', 'PERFORADORA', 'CARGADOR'], {
-  error: 'Tipo inválido: CAMION, EXCAVADORA, PERFORADORA o CARGADOR.',
+const typeCode = z.enum(['CAMION', 'EXCAVADORA', 'PERFORADORA', 'CARGADOR', 'DRAGA'], {
+  error: 'Tipo inválido: CAMION, EXCAVADORA, PERFORADORA , CARGADOR o DRAGA.',
 });
 
 export const createEquipmentSchema = z.object({
