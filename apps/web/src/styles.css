@@ -4,9 +4,14 @@
  * tabla en mayúsculas y atenuados, y badges suaves con un punto de estado.
  */
 :root {
-  --primary: #5c60f5;
-  --primary-hover: #4e52d0;
-  --primary-soft: #eff0fe;
+  /* identidad Codea: navy de marca (--brandBlue de Codea) como color principal y cian como acento */
+  --primary: #0b2b43;
+  --primary-hover: #0a2030;
+  --primary-soft: #e6eef4;
+  /* cian algo más profundo que el de Codea: como borde de foco necesita al menos 3:1 sobre blanco (#0891b2 da 3,7:1) */
+  --accent-cyan: #0891b2;
+  --accent-cyan-soft: #e0f9fd;
+  --accent-cyan-text: #0e7490;
   --heading: #16192c;
   --text: #525f7f;
   --muted: #8898aa;
@@ -74,7 +79,7 @@ h2 {
 }
 
 :focus-visible {
-  outline: 3px solid rgb(92 96 245 / 0.35);
+  outline: 3px solid var(--accent-cyan);
   outline-offset: 2px;
 }
 
@@ -182,7 +187,7 @@ h2 {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(160deg, rgb(22 25 44 / 0.25) 0%, rgb(22 25 44 / 0.55) 55%, rgb(40 43 120 / 0.85) 100%);
+  background: linear-gradient(160deg, rgb(0 16 48 / 0.25) 0%, rgb(0 16 48 / 0.6) 55%, rgb(11 43 67 / 0.9) 100%);
 }
 
 .login-visual > * {
@@ -739,7 +744,7 @@ select:focus,
 textarea:focus {
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgb(92 96 245 / 0.18);
+  box-shadow: 0 0 0 3px rgb(6 182 212 / 0.22);
 }
 
 input:disabled,
@@ -1081,4 +1086,33 @@ textarea {
   .details-item {
     grid-template-columns: 8.5rem 1fr;
   }
+}
+
+/* ---------------------------------------------------------------- acentos cian de Codea */
+/* el logo lleva el camión en cian sobre el navy de la marca */
+.brand-mark {
+  color: #67e8f9;
+}
+
+/* rol del usuario en cian */
+.badge.role {
+  background: var(--accent-cyan-soft);
+  color: var(--accent-cyan-text);
+}
+
+/* información del equipo (botón ⓘ) en cian */
+.details-toggle {
+  color: var(--accent-cyan-text);
+}
+
+.details-toggle.active {
+  background: var(--accent-cyan-soft);
+  color: var(--accent-cyan-text);
+}
+
+/* el campo con foco se marca en cian */
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--accent-cyan);
 }
