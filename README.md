@@ -15,6 +15,15 @@ Frontend y backend se publican por separado y se despliegan con **un solo comand
 | API (backend) | <https://api-production-cb462.up.railway.app> |
 | Health | <https://api-production-cb462.up.railway.app/health> |
 
+
+### Credenciales de acceso
+
+| Rol | Usuario | Contraseña | Puede |
+|---|---|---|---|
+| Supervisor | `supervisor` | `Codea1` | Todo: crear, editar y eliminar equipos, registrar mantenimientos y actualizar el horómetro. |
+| Operador | `operador` | `Codea1` | Registrar mantenimientos y actualizar el horómetro. |
+
+
 ---
 
 ## Qué se realizó
